@@ -1,7 +1,7 @@
 /* TreinoHoje — service worker: faz o app abrir sem internet.
    Ao mudar arquivos do app, aumente o número da versão abaixo. */
-const CACHE = 'treinohoje-v8';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './icon.svg'];
+const CACHE = 'treinohoje-v10';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './icon.svg', './estilo.css', './app.js', './exercicios.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -29,7 +29,17 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Demais arquivos (ícones, fontes): responde do cache e atualiza em segundo plano
+  // Arquivos do próprio app (css, js, ícones): rede primeiro, para página e código nunca ficarem em versões diferentes
+  if (new URL(req.url).origin === self.location.origin) {
+    e.respondWith(
+      fetch(req)
+        .then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })
+        .catch(() => caches.match(req, { ignoreSearch: true }))
+    );
+    return;
+  }
+
+  // Arquivos de fora (fontes do Google): responde do cache e atualiza em segundo plano
   e.respondWith(
     caches.match(req).then(cached => {
       const rede = fetch(req).then(res => {
