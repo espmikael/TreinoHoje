@@ -208,6 +208,51 @@ details.card summary::-webkit-details-marker{display:none}
 .seg.n7{grid-template-columns:repeat(7,1fr)}
 .seg.n6 button,.seg.n7 button{font-size:16px}
 
+/* ---------- metas ---------- */
+.convite{display:flex;align-items:center;gap:10px;padding:14px 8px 14px 16px;border-radius:10px;border:1px dashed var(--rule);margin-bottom:16px}
+.convite > div{flex:1;min-width:0}
+.ct{font-weight:600;font-size:15px}
+.cs{font-size:13px;color:var(--muted);margin-top:2px}
+.metas-grid{display:block}
+.m-card{display:flex;flex-direction:column;gap:16px}
+.m-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.m-nome{font-weight:600;font-size:15px}
+.m-num{font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:26px;line-height:1}
+.m-num small,.seq-n small{font-size:18px;color:var(--muted)}
+.m-kg{font-family:"IBM Plex Mono",monospace;font-size:14px;font-weight:600;white-space:nowrap}
+.m-kg span{color:var(--muted)}
+.segs{display:grid;gap:6px;margin-top:8px}
+.segs i{display:block;height:10px;border-radius:3px;background:var(--line)}
+.segs i.on{background:var(--brand)}
+.m-frase{font-size:13px;color:var(--muted);margin-top:8px}
+.m-card .m-frase{margin-top:0;padding-top:12px;border-top:1px solid var(--line)}
+.tag-leve{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:4px;background:var(--brand-soft);color:var(--brand);font-family:"IBM Plex Mono",monospace;font-size:11px}
+.t-brand{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--brand)}
+.seq{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.seq-n{font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:48px;line-height:.9}
+.quadros{display:grid;grid-template-columns:repeat(8,14px);gap:4px}
+.quadros i{display:block;height:14px;border-radius:3px;background:var(--line)}
+.quadros i.on{background:var(--brand)}
+.prog{height:8px;border-radius:4px;background:var(--line);margin-top:10px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--brand)}
+.st-linha{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.st-linha + .st-linha{margin-top:14px}
+.st-sub{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-top:2px}
+.st-sub.on{color:var(--brand)}
+.stepper{display:flex;align-items:center;gap:4px;flex:none}
+.stepper button{width:44px;height:44px;border-radius:8px;border:1px solid var(--rule);background:var(--field);font-size:22px;line-height:1;color:var(--ink)}
+.stepper span{width:56px;text-align:center;font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:30px;line-height:1}
+.switch{flex:none;width:52px;height:32px;border-radius:999px;border:0;padding:3px;display:flex;justify-content:flex-start;background:var(--rule)}
+.switch span{width:26px;height:26px;border-radius:50%;background:var(--surface);display:block}
+.switch[aria-checked="true"]{background:var(--brand);justify-content:flex-end}
+.leve-on{background:var(--brand-soft)}
+.cg-linha{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.cg-linha:last-child{border-bottom:0}
+.form-meta{border-color:var(--brand)}
+.erro{font-size:13px;color:var(--action-text);margin-top:10px}
+.btn.tracejado{border-style:dashed;margin-top:0}
+.metas-cfg{display:block}
+
 @media (max-width:400px){
   .marca{font-size:32px}
   .tema button{padding:0 9px;gap:5px}
@@ -231,6 +276,9 @@ details.card summary::-webkit-details-marker{display:none}
   .btn{max-width:340px;margin-top:20px}
   .plano-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
   .stats,.dias{max-width:640px}
+  .metas-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;align-items:start}
+  .metas-grid .card{margin-bottom:0}
+  .metas-cfg{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
   .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
   .dash-grid .card{margin-bottom:0}
   .mes-wrap{max-width:720px}
@@ -341,7 +389,6 @@ const PLANO_PADRAO = {
   }
 };
 const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F'];
-const META = { academia: 3, corrida: 1 };
 const KEY = 'treinohoje:v1';
 const TEMA_KEY = 'treinohoje:tema';
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -352,6 +399,8 @@ function load(){
   try{ d = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
   if(!d || !Array.isArray(d.sessoes)) d = { sessoes: [] };
   if(!d.rascunhos) d.rascunhos = {};
+  if(!d.metas) d.metas = { academia: 0, corrida: 0, kmMes: 0, cargas: [], leveSemanas: [], ocultarConvite: false };
+  d.metas = Object.assign({ academia: 0, corrida: 0, kmMes: 0, cargas: [], leveSemanas: [], ocultarConvite: false }, d.metas);
   if(!d.planos || !Object.keys(d.planos).length){ d.planos = { padrao: clone(PLANO_PADRAO) }; d.planoAtivo = 'padrao'; }
   if(!d.planos[d.planoAtivo]) d.planoAtivo = Object.keys(d.planos)[0];
   return d;
@@ -437,6 +486,162 @@ function calendario(){
 const cab = (rot, h1, foco = '') => `<div class="cab"><div><p class="rot">${rot}</p><h1>${h1}</h1>${foco ? `<p class="foco">${foco}</p>` : ''}</div>${calendario()}</div>`;
 
 /* =========================================================
+   METAS — começam vazias; o usuário define em Plano → Metas
+   ========================================================= */
+const pad2 = n => String(n).padStart(2, '0');
+function isoSemana(d){ const x = segunda(d); return `${x.getFullYear()}-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())}`; }
+function metaAcad(ini){
+  const m = db.metas; if(!m.academia) return 0;
+  return m.leveSemanas.includes(isoSemana(ini)) ? Math.max(1, m.academia - 1) : m.academia;
+}
+function temMetaSemanal(){ return db.metas.academia > 0 || db.metas.corrida > 0; }
+function temAlgumaMeta(){ const m = db.metas; return temMetaSemanal() || m.kmMes > 0 || m.cargas.length > 0; }
+function contaSemana(ini){
+  const a = segunda(ini), f = new Date(a); f.setDate(f.getDate() + 7);
+  const ss = db.sessoes.filter(s => { const d = new Date(s.data); return d >= a && d < f; });
+  return { g: ss.filter(s => s.tipo !== 'corrida').length, c: ss.filter(s => s.tipo === 'corrida').length };
+}
+function semanaNaMeta(ini){ const { g, c } = contaSemana(ini); return g >= metaAcad(ini) && c >= db.metas.corrida; }
+function sequencia(){
+  if(!temMetaSemanal()) return 0;
+  const atual = segunda(new Date());
+  let n = semanaNaMeta(atual) ? 1 : 0;
+  const d = new Date(atual);
+  for(let i = 0; i < 156; i++){ d.setDate(d.getDate() - 7); if(semanaNaMeta(d)) n++; else break; }
+  return n;
+}
+function melhorCarga(exId){
+  let mx = 0;
+  db.sessoes.forEach(s => { if(s.ex && s.ex[exId]){ const b = melhorSerie(s.ex[exId]); if(b && b.kg > mx) mx = b.kg; } });
+  return mx;
+}
+const metaTxt = (v, m) => m ? `${v}/${m}` : `${v}`;
+const plural = (n, um, varios) => n === 1 ? um : varios;
+
+function blocoMetas(){
+  const m = db.metas;
+  if(!temAlgumaMeta()){
+    if(m.ocultarConvite) return '';
+    return `<section class="convite"><div><p class="ct">Sem metas por enquanto</p><p class="cs">Quantas vezes por semana você quer treinar e correr?</p></div>
+      <button type="button" class="mini-btn" data-acao="metas">Definir</button>
+      <button type="button" class="x-btn" data-acao="ocultar-convite" aria-label="Ocultar">${IC.x}</button></section>`;
+  }
+  const hoje = new Date();
+  const ini = segunda(hoje);
+  const restam = 7 - (hoje.getDay() + 6) % 7;
+  const cards = [];
+  if(temMetaSemanal()){
+    const { g, c } = contaSemana(ini);
+    const mA = metaAcad(ini), leve = m.leveSemanas.includes(isoSemana(ini));
+    const linha = (nome, feito, meta) => {
+      const n = Math.max(meta, feito);
+      const segs = Array.from({ length: n }, (_, i) => `<i class="${i < feito ? 'on' : ''}"></i>`).join('');
+      return `<div class="m-linha"><div class="m-top"><span class="m-nome">${nome}</span><span class="m-num">${feito}<small> / ${meta}</small></span></div>
+        <div class="segs" style="grid-template-columns:repeat(${n},minmax(0,1fr))" role="img" aria-label="${nome}: ${feito} de ${meta}">${segs}</div></div>`;
+    };
+    const faltaG = Math.max(0, mA - g), faltaC = Math.max(0, m.corrida - c);
+    let frase;
+    if(!faltaG && !faltaC) frase = 'Meta da semana batida.';
+    else {
+      const partes = [];
+      if(faltaG) partes.push(`${faltaG} ${plural(faltaG, 'treino', 'treinos')}`);
+      if(faltaC) partes.push(`${faltaC} ${plural(faltaC, 'corrida', 'corridas')}`);
+      frase = `${plural(faltaG + faltaC, 'Falta', 'Faltam')} ${partes.join(' e ')}.`;
+    }
+    cards.push(`<section class="card m-card">
+      ${m.academia ? linha('Academia', g, mA) : ''}
+      ${m.corrida ? linha('Corrida', c, m.corrida) : ''}
+      <p class="m-frase">${frase}${leve ? ' <span class="tag-leve">semana leve</span>' : ''}</p></section>`);
+    const seq = sequencia();
+    let quadros = '';
+    for(let w = 7; w >= 0; w--){ const d = new Date(ini); d.setDate(d.getDate() - 7 * w); quadros += `<i class="${semanaNaMeta(d) ? 'on' : ''}"></i>`; }
+    cards.push(`<section class="card"><div class="card-head"><span class="t">Sequência</span><span class="t-brand">semanas na meta</span></div>
+      <div class="seq"><div class="seq-n">${seq}<small> ${plural(seq, 'semana', 'semanas')}</small></div>
+      <div class="quadros" role="img" aria-label="Últimas 8 semanas">${quadros}</div></div></section>`);
+  }
+  m.cargas.forEach(cg => {
+    const atual = melhorCarga(cg.exId);
+    const span = cg.kg - cg.inicio;
+    const pct = span <= 0 ? (atual >= cg.kg ? 100 : 0) : Math.max(0, Math.min(100, (atual - cg.inicio) / span * 100));
+    const falta = Math.max(0, cg.kg - atual);
+    const prazo = cg.prazo ? 'até ' + cg.prazo.split('-').reverse().slice(0, 2).join('/') : 'sem prazo';
+    cards.push(`<section class="card"><div class="card-head"><span class="t">Meta de carga</span><span class="t">${prazo}</span></div>
+      <div class="m-top"><span class="m-nome">${esc(cg.nome)}</span><span class="m-kg">${fmtNum(atual)} <span>→ ${fmtNum(cg.kg)} kg</span></span></div>
+      <div class="prog"><i style="width:${pct}%"></i></div>
+      <p class="m-frase">${falta ? `Partiu de ${fmtNum(cg.inicio)} kg · faltam ${fmtNum(falta)} kg` : 'Meta batida.'}</p></section>`);
+  });
+  if(m.kmMes){
+    const ref = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const km = db.sessoes.filter(s => s.tipo === 'corrida' && new Date(s.data) >= ref).reduce((a, s) => a + (num(s.corrida?.km) || 0), 0);
+    cards.push(`<section class="card"><div class="card-head"><span class="t">Corrida no mês</span><span class="m-kg">${fmtNum(km)} <span>/ ${m.kmMes} km</span></span></div>
+      <div class="prog"><i style="width:${Math.min(100, km / m.kmMes * 100)}%"></i></div></section>`);
+  }
+  return `<div class="sec"><span>${temMetaSemanal() ? 'Metas da semana' : 'Metas'}</span><span>${temMetaSemanal() ? (restam === 1 ? 'último dia' : `${restam} dias restantes`) : ''}</span></div>
+    <div class="metas-grid">${cards.join('')}</div>
+    <div class="acoes" style="margin:0 0 20px"><button type="button" class="lnk" data-acao="metas">Editar metas</button></div>`;
+}
+
+/* ---------- tela de configurar metas ---------- */
+let me = null;
+function abrirMetas(){
+  me = clone(db.metas);
+  me.leve = db.metas.leveSemanas.includes(isoSemana(new Date()));
+  me.form = { aberto: false, exId: '', kg: '', prazo: '', erro: false };
+  aba = 'metas';
+}
+function opcoesExMeta(){
+  const doPlano = [], vistos = new Set();
+  plano().rotacao.forEach(k => plano().treinos[k].ex.forEach(e => { if(!vistos.has(e.id)){ vistos.add(e.id); doPlano.push(e); } }));
+  const outros = BIB.filter(e => !vistos.has(e.id));
+  return `<option value="">Escolha…</option><optgroup label="Plano ativo">${doPlano.map(e => `<option value="${e.id}" ${me.form.exId === e.id ? 'selected' : ''}>${esc(e.nome)}</option>`).join('')}</optgroup>
+    <optgroup label="Outros">${outros.map(e => `<option value="${e.id}" ${me.form.exId === e.id ? 'selected' : ''}>${esc(e.nome)}</option>`).join('')}</optgroup>`;
+}
+function telaMetas(){
+  const step = (campo, nome, unid) => {
+    const v = me[campo];
+    return `<div class="st-linha"><div><p class="m-nome">${nome}</p><p class="st-sub ${v ? 'on' : ''}">${v ? `${v} ${unid}` : 'sem meta'}</p></div>
+      <div class="stepper"><button type="button" data-step="${campo}" data-d="-1" aria-label="Diminuir ${nome.toLowerCase()}">−</button>
+      <span>${v ? v + (campo === 'kmMes' ? '' : '×') : '—'}</span>
+      <button type="button" data-step="${campo}" data-d="1" aria-label="Aumentar ${nome.toLowerCase()}">+</button></div></div>`;
+  };
+  const cargas = me.cargas.length ? `<section class="card" style="padding-top:4px;padding-bottom:4px">${me.cargas.map((c, i) =>
+      `<div class="cg-linha"><div><p class="m-nome">${esc(c.nome)}</p><p class="st-sub">${fmtNum(c.kg)} kg · ${c.prazo ? 'até ' + c.prazo.split('-').reverse().slice(0, 2).join('/') : 'sem prazo'}</p></div>
+       <button type="button" class="ico" data-rm-carga="${i}" aria-label="Remover meta de ${esc(c.nome)}">${IC.lixo}</button></div>`).join('')}</section>`
+    : (me.form.aberto ? '' : `<p class="cs" style="margin-bottom:4px">Nenhuma meta de carga. Ex.: chegar a um peso no supino até uma data.</p>`);
+  const form = me.form.aberto ? `<section class="card form-meta">
+      <label class="lb" for="mf-ex">Exercício</label><select class="inp" id="mf-ex" data-mf="exId">${opcoesExMeta()}</select>
+      <div class="grid2" style="margin-top:10px">
+        <div><label class="lb" for="mf-kg">Alvo</label><span class="field"><input id="mf-kg" inputmode="decimal" data-mf="kg" value="${esc(me.form.kg)}" placeholder="0"><small>kg</small></span></div>
+        <div><label class="lb" for="mf-prazo">Prazo (opcional)</label><input class="inp" type="date" id="mf-prazo" data-mf="prazo" value="${esc(me.form.prazo)}"></div>
+      </div>
+      ${me.form.erro ? '<p class="erro">Escolha o exercício e o peso-alvo.</p>' : ''}
+      <div class="acoes"><button type="button" class="mini-btn" data-acao="add-carga">Adicionar</button><button type="button" class="mini-btn ghost" data-acao="cancelar-carga">Cancelar</button></div>
+    </section>` : `<button type="button" class="btn sec-btn tracejado" data-acao="abrir-carga">+ Meta de carga</button>`;
+  const leveTxt = me.leve ? `Ativa até domingo: meta de ${Math.max(1, me.academia - 1)}× academia. A sequência não quebra.` : 'Para semana de prova ou entrega: baixa 1 treino sem quebrar a sequência.';
+  return cab('Plano · ajustes', 'Metas') +
+    `<p class="cs" style="margin-top:12px">Tudo começa sem meta. Defina só o que fizer sentido agora.</p>
+    <div class="metas-cfg">
+    <div><div class="sec"><span>Frequência por semana</span></div>
+      <section class="card">${step('academia', 'Academia', me.academia === 1 ? 'treino por semana' : 'treinos por semana')}${step('corrida', 'Corrida', me.corrida === 1 ? 'corrida por semana' : 'corridas por semana')}</section>
+      ${me.academia ? `<section class="card ${me.leve ? 'leve-on' : ''}"><div class="st-linha"><div><p class="m-nome">Semana leve</p><p class="cs">${leveTxt}</p></div>
+        <button type="button" class="switch" role="switch" aria-checked="${me.leve}" aria-label="Semana leve" data-acao="leve"><span></span></button></div></section>` : ''}
+      <div class="sec"><span>Corrida no mês</span><span>opcional</span></div>
+      <section class="card">${step('kmMes', 'Distância', 'km por mês')}</section>
+    </div>
+    <div><div class="sec"><span>Metas de carga</span><span>opcional</span></div>${cargas}${form}</div>
+    </div>
+    <button type="button" class="btn" data-acao="salvar-metas">Salvar metas</button>
+    <div class="acoes"><button type="button" class="mini-btn ghost" data-acao="voltar-plano">Cancelar</button></div>`;
+}
+function salvarMetas(){
+  const sem = isoSemana(new Date());
+  let leveSemanas = db.metas.leveSemanas.filter(s => s !== sem);
+  if(me.leve && me.academia) leveSemanas.push(sem);
+  db.metas = { academia: me.academia, corrida: me.corrida, kmMes: me.kmMes, cargas: me.cargas, leveSemanas, ocultarConvite: db.metas.ocultarConvite };
+  me = null; aba = 'hoje'; save(); render(); window.scrollTo(0, 0); toast('Metas salvas');
+}
+
+/* =========================================================
    HOJE
    ========================================================= */
 function telaHoje(){
@@ -451,7 +656,7 @@ function telaHoje(){
   const banner = s ? `<div class="banner" role="status"><p>${esc(tituloSessao(s).nome)} salvo</p>
       <button type="button" class="mini-btn" data-share="${s.id}">${IC.share}Compartilhar</button>
       <button type="button" class="x-btn" data-acao="fechar-banner" aria-label="Fechar">${IC.x}</button></div>` : '';
-  return banner + `<div class="seg n${keys.length}" role="tablist" aria-label="Treino">${seg}</div>` +
+  return banner + blocoMetas() + `<div class="seg n${keys.length}" role="tablist" aria-label="Treino">${seg}</div>` +
     (t === 'corrida' ? telaCorrida() : telaTreino(t, t === prox));
 }
 
@@ -473,7 +678,7 @@ function telaTreino(t, ehProx){
       sets = rd.ex[e.id] = Array.from({ length: e.series }, (_, i) => old[i] || { kg: '', reps: '' });
     }
     const last = ultimo(e.id);
-    let ult = 'Primeira vez', hint = '';
+    let ult = 'Sem registro anterior', hint = '';
     if(last){
       const kgs = last.sets.map(s => s.kg).filter(Boolean);
       const mesmoKg = kgs.length && kgs.every(k => k === kgs[0]);
@@ -526,7 +731,7 @@ function telaSemana(){
   const toggle = `<div class="toggle" role="group" aria-label="Visão">
     <button type="button" data-visao="semana" class="${visao === 'semana' ? 'on' : ''}" aria-pressed="${visao === 'semana'}">Semana</button>
     <button type="button" data-visao="mes" class="${visao === 'mes' ? 'on' : ''}" aria-pressed="${visao === 'mes'}">Mês</button></div>`;
-  return cab(`Meta: ${META.academia}× academia · ${META.corrida}× corrida`, visao === 'mes' ? 'Mês' : 'Semana') +
+  return cab(temMetaSemanal() ? `Meta: ${[db.metas.academia ? db.metas.academia + '× academia' : '', db.metas.corrida ? db.metas.corrida + '× corrida' : ''].filter(Boolean).join(' · ')}` : 'Sem metas definidas', visao === 'mes' ? 'Mês' : 'Semana') +
     `<div style="margin-top:16px">${toggle}</div>` + (visao === 'mes' ? visaoMes() : visaoSemana());
 }
 
@@ -552,13 +757,13 @@ function visaoSemana(){
     const g = ss.filter(s => s.tipo !== 'corrida').length;
     const k = ss.filter(s => s.tipo === 'corrida').reduce((x, s) => x + (num(s.corrida?.km) || 0), 0);
     linhas += `<tr><td>${fmtData(a)}</td>
-      <td>${g}/${META.academia}<div class="bar"><i style="width:${Math.min(100, g / META.academia * 100)}%"></i></div></td>
+      <td>${metaTxt(g, metaAcad(a))}<div class="bar"><i style="width:${Math.min(100, g / (metaAcad(a) || Math.max(3, g)) * 100)}%"></i></div></td>
       <td class="num">${k ? fmtNum(k) + ' km' : '—'}</td></tr>`;
   }
   return `<div class="sec"><span>Esta semana</span></div>
     <div class="stats">
-      <div class="stat"><b>${acad}/${META.academia}</b><span>academia</span></div>
-      <div class="stat"><b>${corr.length}/${META.corrida}</b><span>corrida</span></div>
+      <div class="stat"><b>${metaTxt(acad, metaAcad(ini))}</b><span>academia</span></div>
+      <div class="stat"><b>${metaTxt(corr.length, db.metas.corrida)}</b><span>corrida</span></div>
       <div class="stat"><b>${km ? fmtNum(km) : '0'}</b><span>km</span></div>
     </div>
     <div class="sec"><span>Dias</span><span>R = corrida</span></div><div class="dias">${dias}</div>
@@ -595,8 +800,7 @@ function visaoMes(){
     const f = new Date(d); f.setDate(f.getDate() + 7);
     if(d > hoje) break;
     semanasTotal++;
-    const g = db.sessoes.filter(s => { const x = new Date(s.data); return s.tipo !== 'corrida' && x >= d && x < f; }).length;
-    if(g >= META.academia) semanasMeta++;
+    if(semanaNaMeta(d)) semanasMeta++;
   }
   const titulo = ref.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   return `<div class="mes-wrap"><div class="mes-nav">
@@ -609,7 +813,7 @@ function visaoMes(){
     <div class="stats">
       <div class="stat"><b>${acad}</b><span>academia</span></div>
       <div class="stat"><b>${km ? fmtNum(km) : '0'}</b><span>km · ${corr.length} corr.</span></div>
-      <div class="stat"><b>${semanasMeta}/${semanasTotal}</b><span>semanas na meta</span></div>
+      ${temMetaSemanal() ? `<div class="stat"><b>${semanasMeta}/${semanasTotal}</b><span>semanas na meta</span></div>` : `<div class="stat"><b>${Object.keys(porDia).length}</b><span>dias ativos</span></div>`}
     </div></div>`;
 }
 
@@ -662,7 +866,8 @@ function graficoFrequencia(){
     const b = new Date(a); b.setDate(b.getDate() + 7);
     semanas.push({ a, n: db.sessoes.filter(s => { const d = new Date(s.data); return s.tipo !== 'corrida' && d >= a && d < b; }).length });
   }
-  const mx = Math.max(META.academia + 1, ...semanas.map(s => s.n));
+  const mA = db.metas.academia;
+  const mx = Math.max((mA || 3) + 1, ...semanas.map(s => s.n));
   const bw = (W - L - R) / N;
   const y = v => T + (H - T - B) * (1 - v / mx);
   let barras = '';
@@ -671,7 +876,7 @@ function graficoFrequencia(){
     barras += `<rect class="barra ${s.n ? '' : 'zero'}" x="${L + i * bw + bw * .18}" y="${H - B - h}" width="${bw * .64}" height="${h}" rx="3"><title>Semana de ${fmtData(s.a)}: ${s.n}</title></rect>`;
     if(s.n) barras += `<text class="val" x="${L + i * bw + bw / 2}" y="${H - B - h - 6}" text-anchor="middle">${s.n}</text>`;
   });
-  const meta = `<line class="meta" x1="${L}" x2="${W - R}" y1="${y(META.academia)}" y2="${y(META.academia)}"/>`;
+  const meta = mA ? `<line class="meta" x1="${L}" x2="${W - R}" y1="${y(mA)}" y2="${y(mA)}"/>` : '';
   const xs = `<text x="${L}" y="${H - 8}">${fmtData(semanas[0].a)}</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${fmtData(semanas[N - 1].a)}</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Treinos de academia por semana nas últimas ${N} semanas">${meta}${barras}${xs}</svg>`;
 }
@@ -728,7 +933,7 @@ function telaHistorico(){
       <div class="card">${cargaCard}</div>
       <div class="card"><div class="card-head"><span class="t">Treinos por semana</span></div>
         <div class="chart">${graficoFrequencia()}</div>
-        <div class="legenda"><span><i></i>meta de ${META.academia}</span></div></div>
+        ${db.metas.academia ? `<div class="legenda"><span><i></i>meta de ${db.metas.academia}</span></div>` : ''}</div>
     </div>
     <div class="sec"><span>Registros</span></div>${itens}`;
 }
@@ -755,6 +960,10 @@ function telaPlano(){
         <button type="button" class="mini-btn ghost" data-acao="novo">Novo plano</button>
         <button type="button" class="mini-btn ghost" data-acao="gerador">Gerar plano</button>
       </div></div>
+    <div class="sec"><span>Metas</span></div>
+    <div class="card"><div class="st-linha"><div><p class="m-nome">${temAlgumaMeta() ? [db.metas.academia ? db.metas.academia + '× academia' : '', db.metas.corrida ? db.metas.corrida + '× corrida' : '', db.metas.kmMes ? db.metas.kmMes + ' km/mês' : '', db.metas.cargas.length ? db.metas.cargas.length + ' de carga' : ''].filter(Boolean).join(' · ') : 'Nenhuma meta definida'}</p>
+      <p class="cs">Frequência semanal, carga e corrida. Tudo opcional.</p></div>
+      <button type="button" class="mini-btn ${temAlgumaMeta() ? 'ghost' : ''}" data-acao="metas">${temAlgumaMeta() ? 'Editar' : 'Definir'}</button></div></div>
     <div class="plano-grid">${blocos}</div>
     <div class="plano-grid">
       <div><div class="sec"><span>Método</span></div>
@@ -1037,9 +1246,9 @@ async function compartilhar(id){
    RENDER + EVENTOS
    ========================================================= */
 function render(){
-  const telas = { hoje: telaHoje, semana: telaSemana, historico: telaHistorico, plano: telaPlano, editor: telaEditor, gerador: telaGerador };
+  const telas = { hoje: telaHoje, semana: telaSemana, historico: telaHistorico, plano: telaPlano, editor: telaEditor, gerador: telaGerador, metas: telaMetas };
   $('#app').innerHTML = telas[aba]();
-  const navAba = (aba === 'editor' || aba === 'gerador') ? 'plano' : aba;
+  const navAba = (aba === 'editor' || aba === 'gerador' || aba === 'metas') ? 'plano' : aba;
   document.querySelectorAll('nav.menu button').forEach(b => {
     const on = b.dataset.aba === navAba;
     b.classList.toggle('on', on);
@@ -1063,7 +1272,7 @@ document.querySelector('.tema').addEventListener('click', e => {
 document.querySelector('nav.menu').addEventListener('click', e => {
   const b = e.target.closest('button[data-aba]'); if(!b) return;
   if((aba === 'editor') && !confirm('Sair do editor sem salvar?')) return;
-  aba = b.dataset.aba; ed = null; render(); window.scrollTo(0, 0);
+  aba = b.dataset.aba; ed = null; me = null; render(); window.scrollTo(0, 0);
 });
 
 $('#app').addEventListener('input', e => {
@@ -1076,6 +1285,8 @@ $('#app').addEventListener('input', e => {
     db.rascunhos.corrida[el.dataset.run] = el.value.trim(); save();
     const p = pace(num(db.rascunhos.corrida.km), num(db.rascunhos.corrida.min));
     $('#pace').innerHTML = `Pace <b>${p ? p + ' /km' : '—'}</b>`;
+  } else if(el.dataset.mf && me){
+    me.form[el.dataset.mf] = el.value;
   } else if(el.dataset.pe && ed){
     const f = el.dataset.pe, ti = +el.dataset.ti, ei = +el.dataset.ei;
     if(f === 'nome') ed.nome = el.value;
@@ -1090,6 +1301,7 @@ $('#app').addEventListener('change', e => {
   const el = e.target;
   if(el.id === 'plano-ativo'){ db.planoAtivo = el.value; tipoSel = null; save(); render(); toast('Plano ativado'); return; }
   if(el.id === 'dash-ex'){ dashEx = el.value; render(); return; }
+  if(el.dataset.mf && me){ me.form[el.dataset.mf] = el.value; return; }
   if(el.dataset.addEx != null && ed){
     const ti = +el.dataset.addEx; const v = el.value;
     if(!v) return;
@@ -1112,6 +1324,7 @@ $('#app').addEventListener('change', e => {
         if(!Array.isArray(d.sessoes)) throw 0;
         if(!confirm(`Substituir os dados atuais por ${d.sessoes.length} registros do backup?`)) return;
         db.sessoes = d.sessoes.sort((a, b) => new Date(a.data) - new Date(b.data));
+        if(d.metas) db.metas = Object.assign({ academia: 0, corrida: 0, kmMes: 0, cargas: [], leveSemanas: [], ocultarConvite: false }, d.metas);
         if(d.planos && Object.keys(d.planos).length){ db.planos = d.planos; db.planoAtivo = d.planos[d.planoAtivo] ? d.planoAtivo : Object.keys(d.planos)[0]; }
         save(); render(); toast('Backup importado');
       }catch(err){ toast('Arquivo inválido'); }
@@ -1127,6 +1340,13 @@ $('#app').addEventListener('click', e => {
   if(el.dataset.visao){ visao = el.dataset.visao; mesOffset = 0; render(); return; }
   if(el.dataset.mes){ mesOffset = Math.min(0, mesOffset + +el.dataset.mes); render(); return; }
   if(el.dataset.share){ compartilhar(el.dataset.share); return; }
+  if(el.dataset.step && me){
+    const c = el.dataset.step, passo = c === 'kmMes' ? 5 : 1, max = c === 'kmMes' ? 500 : 7;
+    me[c] = Math.min(max, Math.max(0, me[c] + passo * +el.dataset.d));
+    if(c === 'academia' && !me.academia) me.leve = false;
+    render(); return;
+  }
+  if(el.dataset.rmCarga != null && me){ me.cargas.splice(+el.dataset.rmCarga, 1); render(); return; }
   if(el.dataset.gen){ gen[el.dataset.gen] = isNaN(+el.dataset.v) ? el.dataset.v : +el.dataset.v; render(); return; }
   if(el.dataset.del){
     if(confirm('Excluir este registro?')){ db.sessoes = db.sessoes.filter(s => String(s.id) !== el.dataset.del); if(String(ultimaSalva) === el.dataset.del) ultimaSalva = null; save(); render(); }
@@ -1176,9 +1396,21 @@ $('#app').addEventListener('click', e => {
   if(acao === 'novo'){ abrirEditor(null); render(); window.scrollTo(0, 0); }
   if(acao === 'gerador'){ aba = 'gerador'; render(); window.scrollTo(0, 0); }
   if(acao === 'gerar'){ gerarPlano(); render(); window.scrollTo(0, 0); toast('Revise e salve o plano'); }
-  if(acao === 'voltar-plano'){ aba = 'plano'; render(); window.scrollTo(0, 0); }
+  if(acao === 'voltar-plano'){ aba = 'plano'; me = null; render(); window.scrollTo(0, 0); }
+  if(acao === 'metas'){ abrirMetas(); render(); window.scrollTo(0, 0); }
+  if(acao === 'ocultar-convite'){ db.metas.ocultarConvite = true; save(); render(); toast('Dá para definir metas depois em Plano'); }
+  if(acao === 'leve' && me){ me.leve = !me.leve; render(); }
+  if(acao === 'abrir-carga' && me){ me.form = { aberto: true, exId: '', kg: '', prazo: '', erro: false }; render(); }
+  if(acao === 'cancelar-carga' && me){ me.form.aberto = false; render(); }
+  if(acao === 'add-carga' && me){
+    const kg = num(me.form.kg);
+    if(!me.form.exId || !kg){ me.form.erro = true; render(); return; }
+    me.cargas.push({ id: 'm' + Date.now().toString(36), exId: me.form.exId, nome: nomeEx(me.form.exId), kg, inicio: melhorCarga(me.form.exId), prazo: me.form.prazo || '' });
+    me.form = { aberto: false, exId: '', kg: '', prazo: '', erro: false }; render();
+  }
+  if(acao === 'salvar-metas' && me){ salvarMetas(); }
   if(acao === 'exportar'){
-    const blob = new Blob([JSON.stringify({ sessoes: db.sessoes, planos: db.planos, planoAtivo: db.planoAtivo }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ sessoes: db.sessoes, planos: db.planos, planoAtivo: db.planoAtivo, metas: db.metas }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `treinohoje-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -1190,7 +1422,7 @@ $('#app').addEventListener('click', e => {
 
 /* atualiza a data ao voltar para o app num outro dia */
 document.addEventListener('visibilitychange', () => {
-  if(!document.hidden && aba !== 'editor' && !document.activeElement?.matches('input,select')) render();
+  if(!document.hidden && aba !== 'editor' && aba !== 'metas' && !document.activeElement?.matches('input,select')) render();
 });
 
 /* app instalável */
