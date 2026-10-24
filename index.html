@@ -342,8 +342,8 @@ body{font-variant-numeric:tabular-nums}
 }
 
 /* ---------- ficha do exercício ---------- */
-.info{flex:none;width:30px;height:30px;margin-left:6px;border-radius:50%;border:1.5px solid var(--brand);background:transparent;color:var(--brand);
-  font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:14px;line-height:1;display:inline-grid;place-items:center;vertical-align:middle}
+.info{flex:none;width:32px;height:32px;margin-left:2px;padding:0;border:0;background:none;color:var(--brand);display:inline-grid;place-items:center;vertical-align:middle}
+.info span{width:18px;height:18px;border-radius:50%;border:1.3px solid var(--brand);display:grid;place-items:center;font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:11px;line-height:1}
 .ex-head .nome-i{display:flex;align-items:center;min-width:0}
 .ficha{max-height:92vh;overflow-y:auto}
 .ficha-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -1131,7 +1131,7 @@ function telaTreino(t){
       </div>`;
     }).join('');
     return `<section class="card">
-      <div class="ex-head"><div class="nome-i"><h2>${esc(e.nome)}</h2>${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}">i</button>` : ''}</div><span class="ex-meta">${feitas}/${e.series} · ${e.series} × ${e.reps[0]}–${e.reps[1]}</span></div>
+      <div class="ex-head"><div class="nome-i"><h2>${esc(e.nome)}</h2>${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}"><span>i</span></button>` : ''}</div><span class="ex-meta">${feitas}/${e.series} · ${e.series} × ${e.reps[0]}–${e.reps[1]}</span></div>
       <div class="ex-sub"><p class="ultima">${ult}${e.obs ? ' · ' + esc(e.obs) : ''}</p>
         <button type="button" class="trocar" data-trocar="${e.orig}" aria-expanded="${trocando === e.orig}">${trocando === e.orig ? 'Fechar' : (e.trocado ? 'Trocado' : 'Trocar')}</button></div>
       ${hint}${painel}
@@ -1469,7 +1469,7 @@ function telaPlano(){
   const blocos = p.rotacao.map(k => {
     const t = p.treinos[k];
     return `<div><div class="sec"><span>Treino ${k}</span><span>${esc(t.foco)}</span></div><div class="card"><ul class="plano">${
-      t.ex.map(e => `<li><span class="nome-i" style="color:inherit;font:inherit;flex:1;white-space:normal">${esc(e.nome)}${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}">i</button>` : ''}</span><span>${e.series} × ${e.reps[0]}–${e.reps[1]}</span></li>`).join('')}</ul></div></div>`;
+      t.ex.map(e => `<li><span class="nome-i" style="color:inherit;font:inherit;flex:1;white-space:normal">${esc(e.nome)}${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}"><span>i</span></button>` : ''}</span><span>${e.series} × ${e.reps[0]}–${e.reps[1]}</span></li>`).join('')}</ul></div></div>`;
   }).join('');
   return cab(`Rotação ${p.rotacao.join(' → ')}`, 'Plano') +
     `<div class="sec"><span>Seus planos</span><span>${lista.length}</span></div>
