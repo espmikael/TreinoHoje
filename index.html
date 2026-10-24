@@ -260,6 +260,86 @@ details.card summary::-webkit-details-marker{display:none}
 .btn.tracejado{border-style:dashed;margin-top:0}
 .metas-cfg{display:block}
 
+/* ---------- rodada 2 ---------- */
+body{font-variant-numeric:tabular-nums}
+.field input{height:48px}
+.set{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 48px}
+.chk{width:48px;height:48px;border-radius:8px;border:1px solid var(--rule);background:var(--field);color:var(--muted);display:grid;place-items:center}
+.chk svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.set.ok .chk{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.set.ok .field input{background:var(--brand-soft)}
+.ex-sub{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
+.ex-sub .ultima{margin-top:0}
+.trocar{flex:none;background:none;border:0;padding:6px 0;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.troca{margin-top:10px;padding:10px;border-radius:8px;background:var(--bg)}
+.troca-t{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.ex-feito{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);margin-bottom:12px}
+.ef-ok{flex:none;width:28px;height:28px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-size:14px}
+.ef-txt{flex:1;min-width:0;display:flex;flex-direction:column}
+.ef-nome{font-weight:600;font-size:14px}
+.ef-res{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ef-ed{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted)}
+.dica{font-size:12px;color:var(--muted);margin:-4px 0 12px}
+.barra-fixa{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom));z-index:4;display:flex;align-items:center;gap:12px;margin-top:8px;padding:10px 10px 10px 16px;
+  border-radius:12px;border:1px solid var(--line);background:var(--surface);box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.bf-info{flex:1;min-width:0}
+.bf-info p{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.bf-segs{display:grid;gap:4px;margin-top:6px}
+.bf-segs i{display:block;height:6px;border-radius:2px;background:var(--line)}
+.bf-segs i.on{background:var(--brand)}
+.btn-fixo{flex:none;height:48px;padding:0 20px;border:0;border-radius:10px;background:var(--action);color:var(--action-ink);
+  font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase}
+.metas-linha{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-bottom:16px;padding:11px 14px;border:0;border-radius:8px;background:var(--brand-soft);color:var(--ink);font-size:13px;text-align:left}
+.metas-linha b{font-weight:600}
+.ml-ver{flex:none;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--brand)}
+.lembrete{display:flex;align-items:center;gap:10px;padding:12px 8px 12px 14px;border-radius:10px;border:1px solid var(--rule);background:var(--surface);margin-bottom:12px}
+.lembrete > div{flex:1;min-width:0}
+.banner .lnk{padding:6px 4px}
+.folha-fundo{position:fixed;inset:0;z-index:20;background:rgba(20,18,15,.45);display:flex;align-items:flex-end;justify-content:center}
+.folha{width:100%;max-width:560px;padding:20px 16px calc(24px + env(safe-area-inset-bottom));border-radius:18px 18px 0 0;background:var(--surface)}
+.folha h2{font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:30px;line-height:1;text-transform:uppercase;margin-top:4px}
+.folha-alca{width:40px;height:4px;border-radius:2px;background:var(--rule);margin:0 auto 16px}
+.seg.n2{grid-template-columns:repeat(2,1fr)}
+.seg.n2 button{font-family:Inter,sans-serif;font-size:14px;font-weight:600;text-transform:none;letter-spacing:0;height:40px}
+.passos{list-style:none;margin-top:14px;display:grid;gap:10px}
+.passos li{display:flex;gap:12px;align-items:flex-start;font-size:14px}
+.passos li span{flex:none;width:24px;height:24px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600}
+.sec-vol{align-items:center}
+.toggle.mini button{height:28px;padding:0 10px;font-size:10px}
+.vol{display:grid;gap:10px}
+.vol-l{display:grid;grid-template-columns:96px minmax(0,1fr) 34px;gap:8px;align-items:center;font-size:13px}
+.vol-l b{text-align:right;font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600}
+.vol-b{position:relative;height:12px;border-radius:3px;background:var(--bg);overflow:hidden}
+.vol-b .faixa{position:absolute;top:0;bottom:0;left:41.67%;width:41.66%;background:var(--brand-soft)}
+.vol-b .valor{position:absolute;top:2px;bottom:2px;left:0;border-radius:2px;background:transparent}
+.vol-b .valor.abaixo{background:var(--brand);opacity:.55}
+.vol-b .valor.na-faixa{background:var(--brand)}
+.vol-esc{margin-bottom:-4px}
+.vol-escala{position:relative;height:12px;font-family:"IBM Plex Mono",monospace;font-size:9px;color:var(--muted)}
+.vol-escala span{position:absolute;transform:translateX(-50%)}
+.vol-nota{margin-top:4px;padding-top:12px;border-top:1px solid var(--line)}
+.card-head select{flex:1;min-width:0;max-width:none}
+.forca-n{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+.forca-n b{font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:44px;line-height:1}
+.forca-n span{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--muted)}
+.forca-n em{margin-left:auto;font-style:normal;font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--brand)}
+.backup-st{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-bottom:8px}
+.backup-st span:last-child{font-family:"IBM Plex Mono",monospace;font-size:12px}
+.st-ok{color:var(--brand)}
+.st-alerta{color:var(--action-text)}
+.tema .tl{display:inline}
+@media (max-width:440px){
+  .tema .tl{display:none}
+  .tema button{padding:0 10px}
+  .so-largo{display:none}
+}
+@media (prefers-reduced-motion: no-preference){
+  .ex-feito.novo{animation:encolhe .28s ease-out}
+  .chk.pop svg{animation:pop .22s ease-out}
+  @keyframes encolhe{from{opacity:.4;transform:scaleY(1.6);transform-origin:top}to{opacity:1;transform:none}}
+  @keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+}
+
 @media (max-width:400px){
   .marca{font-size:32px}
   .tema button{padding:0 9px;gap:5px}
@@ -284,6 +364,8 @@ details.card summary::-webkit-details-marker{display:none}
   .plano-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
   .stats,.dias{max-width:640px}
   .escolhas{grid-template-columns:repeat(2,1fr);gap:12px}
+  .barra-fixa{bottom:16px;max-width:520px;margin-left:auto}
+  .lista-ex .ex-feito{margin-bottom:0}
   .metas-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;align-items:start}
   .metas-grid .card{margin-bottom:0}
   .metas-cfg{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
@@ -306,8 +388,9 @@ details.card summary::-webkit-details-marker{display:none}
     <button data-aba="plano"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Plano</button>
   </div></nav>
   <div class="tema" role="group" aria-label="Aparência">
-    <button type="button" data-tema="claro"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Claro</button>
-    <button type="button" data-tema="escuro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>Escuro</button>
+    <button type="button" data-tema="claro" aria-label="Tema claro"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="tl">Claro</span></button>
+    <button type="button" data-tema="escuro" aria-label="Tema escuro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span class="tl">Escuro</span></button>
+    <button type="button" data-tema="auto" aria-label="Tema automático, segue o celular"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4v16"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg><span class="tl">Auto</span></button>
   </div>
 </header>
 <main id="app"></main>
@@ -521,12 +604,7 @@ const plural = (n, um, varios) => n === 1 ? um : varios;
 
 function blocoMetas(){
   const m = db.metas;
-  if(!temAlgumaMeta()){
-    if(m.ocultarConvite) return '';
-    return `<section class="convite"><div><p class="ct">Sem metas por enquanto</p><p class="cs">Quantas vezes por semana você quer treinar e correr?</p></div>
-      <button type="button" class="mini-btn" data-acao="metas">Definir</button>
-      <button type="button" class="x-btn" data-acao="ocultar-convite" aria-label="Ocultar">${IC.x}</button></section>`;
-  }
+  if(!temAlgumaMeta()) return '';
   const hoje = new Date();
   const ini = segunda(hoje);
   const restam = 7 - (hoje.getDay() + 6) % 7;
@@ -579,7 +657,7 @@ function blocoMetas(){
   }
   return `<div class="sec"><span>${temMetaSemanal() ? 'Metas da semana' : 'Metas'}</span><span>${temMetaSemanal() ? (restam === 1 ? 'último dia' : `${restam} dias restantes`) : ''}</span></div>
     <div class="metas-grid">${cards.join('')}</div>
-    <div class="acoes" style="margin:0 0 20px"><button type="button" class="lnk" data-acao="metas">Editar metas</button></div>`;
+    <div class="acoes" style="margin:0 0 4px"><button type="button" class="lnk" data-acao="metas">Editar metas</button></div>`;
 }
 
 /* ---------- tela de configurar metas ---------- */
@@ -665,14 +743,83 @@ function quandoFoi(k){
   }
   return 'nunca';
 }
+const diasDesde = iso => Math.floor((Date.now() - new Date(iso)) / 864e5);
+const vibrar = p => { try{ if(navigator.vibrate && !matchMedia('(prefers-reduced-motion: reduce)').matches) navigator.vibrate(p); }catch(e){} };
+const kgTxt = v => esc(String(v ?? '').replace('.', ','));
+const ehApp = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+/* estado só da tela de treino (não salvo) */
+const abertos = new Set();      // exercícios completos reabertos para editar
+let trocando = null;            // exercício com o painel "trocar" aberto
+let recemFechado = null;        // anima só o cartão que acabou de encolher
+let recemMarcado = null;        // anima só o ✓ que acabou de ser tocado
+let soInstalar = /iphone|ipad|ipod/i.test(navigator.userAgent) ? 'ios' : 'android';
+
+function bannerSalvo(){
+  const s = ultimaSalva && db.sessoes.find(x => x.id === ultimaSalva);
+  if(!s) return '';
+  const pode = db.desfazer && db.desfazer.id === s.id && Date.now() - db.desfazer.em < 5 * 60e3;
+  return `<div class="banner" role="status"><p>${esc(tituloSessao(s).nome)} salvo</p>
+    ${pode ? `<button type="button" class="lnk" data-acao="desfazer">Desfazer</button>` : ''}
+    <button type="button" class="mini-btn" data-share="${s.id}" aria-label="Compartilhar">${IC.share}<span class="so-largo">Compartilhar</span></button>
+    <button type="button" class="x-btn" data-acao="fechar-banner" aria-label="Fechar">${IC.x}</button></div>`;
+}
+function lembreteBackup(){
+  if(db.sessoes.length < 3) return '';
+  if(db.backupAdiadoAte && Date.now() < new Date(db.backupAdiadoAte)) return '';
+  const ref = db.ultimoBackup || db.sessoes[0].data;
+  const dias = diasDesde(ref);
+  if(dias < 30) return '';
+  const txt = db.ultimoBackup ? `Último backup há ${dias} dias` : 'Você ainda não fez backup';
+  return `<section class="lembrete" role="status"><div><p class="ct">${txt}</p><p class="cs">Leva 2 segundos e protege seus registros.</p></div>
+    <button type="button" class="mini-btn" data-acao="exportar">Exportar</button>
+    <button type="button" class="x-btn" data-acao="adiar-backup" aria-label="Lembrar depois">${IC.x}</button></section>`;
+}
+function metasLinha(){
+  const m = db.metas;
+  if(!temAlgumaMeta()){
+    if(m.ocultarConvite) return '';
+    return `<section class="convite"><div><p class="ct">Sem metas por enquanto</p><p class="cs">Quantas vezes por semana você quer treinar e correr?</p></div>
+      <button type="button" class="mini-btn" data-acao="metas">Definir</button>
+      <button type="button" class="x-btn" data-acao="ocultar-convite" aria-label="Ocultar">${IC.x}</button></section>`;
+  }
+  let txt;
+  if(temMetaSemanal()){
+    const ini = segunda(new Date()); const { g, c } = contaSemana(ini);
+    const partes = [];
+    if(m.academia) partes.push(`academia ${g}/${metaAcad(ini)}`);
+    if(m.corrida) partes.push(`corrida ${c}/${m.corrida}`);
+    txt = `<b>Semana</b> · ${partes.join(' · ')}`;
+  } else {
+    const n = m.cargas.length + (m.kmMes ? 1 : 0);
+    txt = `<b>Metas</b> · ${n} em andamento`;
+  }
+  return `<button type="button" class="metas-linha" data-ir="semana"><span>${txt}</span><span class="ml-ver">ver metas →</span></button>`;
+}
+function folhaInstalar(){
+  if(ehApp() || db.vistoInstalar || !matchMedia('(pointer: coarse)').matches) return '';
+  const passos = soInstalar === 'ios'
+    ? ['Abra o site no Safari', 'Toque em Compartilhar (quadrado com seta)', 'Escolha “Adicionar à Tela de Início”']
+    : ['Abra o site no Chrome', 'Toque no menu ⋮ no canto superior', 'Escolha “Instalar app”'];
+  return `<div class="folha-fundo"><section class="folha" role="dialog" aria-modal="true" aria-labelledby="folha-tit">
+    <div class="folha-alca" aria-hidden="true"></div>
+    <p class="rot">Primeiro uso</p><h2 id="folha-tit">Instale o app</h2>
+    <p class="cs" style="font-size:14px;margin-top:8px">Instalado, ele abre em tela cheia, funciona sem internet e o celular não apaga seus registros por falta de uso.</p>
+    <div class="seg n2" role="tablist" aria-label="Sistema" style="margin-top:16px">
+      <button type="button" role="tab" data-so="ios" aria-selected="${soInstalar === 'ios'}" class="${soInstalar === 'ios' ? 'on' : ''}">iPhone</button>
+      <button type="button" role="tab" data-so="android" aria-selected="${soInstalar === 'android'}" class="${soInstalar === 'android' ? 'on' : ''}">Android</button>
+    </div>
+    <ol class="passos">${passos.map((p, i) => `<li><span>${i + 1}</span>${p}</li>`).join('')}</ol>
+    ${pedidoInstalar ? `<button type="button" class="btn" data-acao="instalar" style="margin-top:16px">Instalar agora</button>` : ''}
+    <button type="button" class="btn sec-btn" data-acao="fechar-instalar" style="margin-top:10px">Agora não</button>
+  </section></div>`;
+}
+
 function telaHoje(){
   const rot = rotacao();
   const t = tipoAtual();
   const keys = [...rot, 'corrida'];
-  const s = ultimaSalva && db.sessoes.find(x => x.id === ultimaSalva);
-  const banner = s ? `<div class="banner" role="status"><p>${esc(tituloSessao(s).nome)} salvo</p>
-      <button type="button" class="mini-btn" data-share="${s.id}">${IC.share}Compartilhar</button>
-      <button type="button" class="x-btn" data-acao="fechar-banner" aria-label="Fechar">${IC.x}</button></div>` : '';
+  const topo = bannerSalvo() + lembreteBackup() + metasLinha();
   if(!t){
     const opcoes = keys.map(k => {
       const foco = k === 'corrida' ? 'Cardio' : plano().treinos[k].foco;
@@ -681,28 +828,60 @@ function telaHoje(){
         <span class="e-txt"><span class="e-nome">${k === 'corrida' ? 'Corrida' : 'Treino ' + k}</span><span class="e-foco">${esc(foco)}</span></span>
         <span class="e-quando">${quandoFoi(k)}</span></button>`;
     }).join('');
-    return banner + blocoMetas() + cab('Hoje', 'Qual treino?') +
-      `<div class="sec"><span>Escolha o de hoje</span><span>${esc(plano().nome)}</span></div><div class="escolhas">${opcoes}</div>`;
+    return topo + cab('Hoje', 'Qual treino?') +
+      `<div class="sec"><span>Escolha o de hoje</span><span>${esc(plano().nome)}</span></div><div class="escolhas">${opcoes}</div>` + folhaInstalar();
   }
   const seg = keys.map(k =>
     `<button type="button" role="tab" aria-selected="${k === t}" data-tipo="${k}" class="${k === t ? 'on' : ''}">${k === 'corrida' ? 'Corrida' : k}</button>`
   ).join('');
-  return banner + blocoMetas() + `<div class="seg n${keys.length}" role="tablist" aria-label="Treino">${seg}</div>` +
-    (t === 'corrida' ? telaCorrida() : telaTreino(t));
+  return topo + `<div class="seg n${keys.length}" role="tablist" aria-label="Treino">${seg}</div>` +
+    (t === 'corrida' ? telaCorrida() : telaTreino(t)) + folhaInstalar();
 }
 
 function rascKey(t){ return db.planoAtivo + ':' + t; }
+function rascunho(t){
+  const rk = rascKey(t);
+  const rd = db.rascunhos[rk] || (db.rascunhos[rk] = { ex: {}, trocas: {} });
+  if(!rd.trocas) rd.trocas = {};
+  return rd;
+}
+/* exercícios do treino já com as trocas do dia aplicadas */
+function exerciciosDoDia(t){
+  const rd = rascunho(t);
+  return plano().treinos[t].ex.map(e => {
+    const alt = rd.trocas[e.id] && BIB_ID[rd.trocas[e.id]];
+    return alt ? { ...e, id: alt.id, nome: alt.nome, obs: '', orig: e.id, trocado: true } : { ...e, orig: e.id, trocado: false };
+  });
+}
+function setsDe(rd, e){
+  let sets = rd.ex[e.id];
+  if(!sets || sets.length !== e.series){
+    const old = sets || [];
+    sets = rd.ex[e.id] = Array.from({ length: e.series }, (_, i) => old[i] || { kg: '', reps: '' });
+  }
+  return sets;
+}
+const completo = sets => sets.length && sets.every(s => s.reps !== '');
+function alternativas(e, lista){
+  const g = (BIB_ID[e.orig] || BIB_ID[e.id] || {}).g;
+  if(!g) return [];
+  return BIB.filter(b => b.g === g && b.id !== e.id && b.id !== e.orig && !lista.some(x => x.id === b.id)).slice(0, 5);
+}
 
 function telaTreino(t){
   const p = plano().treinos[t];
-  const rk = rascKey(t);
-  const rd = db.rascunhos[rk] || (db.rascunhos[rk] = { ex: {} });
-  const totalSeries = p.ex.reduce((a, e) => a + e.series, 0);
-  const cards = p.ex.map(e => {
-    let sets = rd.ex[e.id];
-    if(!sets || sets.length !== e.series){
-      const old = sets || [];
-      sets = rd.ex[e.id] = Array.from({ length: e.series }, (_, i) => old[i] || { kg: '', reps: '' });
+  const rd = rascunho(t);
+  const lista = exerciciosDoDia(t);
+  const totalSeries = lista.reduce((a, e) => a + e.series, 0);
+  const cards = lista.map(e => {
+    const sets = setsDe(rd, e);
+    const feitas = sets.filter(s => s.reps !== '').length;
+    if(completo(sets) && !abertos.has(e.id)){
+      const resumo = sets.map(s => (s.kg ? kgTxt(s.kg) + ' kg × ' : '') + esc(s.reps)).join(' · ');
+      return `<button type="button" class="ex-feito ${recemFechado === e.id ? 'novo' : ''}" data-abrir="${e.id}" aria-label="Editar ${esc(e.nome)}">
+        <span class="ef-ok" aria-hidden="true">✓</span>
+        <span class="ef-txt"><span class="ef-nome">${esc(e.nome)}</span><span class="ef-res">${resumo}</span></span>
+        <span class="ef-ed">editar</span></button>`;
     }
     const last = ultimo(e.id);
     let ult = 'Sem registro anterior', hint = '';
@@ -710,28 +889,66 @@ function telaTreino(t){
       const kgs = last.sets.map(s => s.kg).filter(Boolean);
       const mesmoKg = kgs.length && kgs.every(k => k === kgs[0]);
       ult = `Última · ${fmtData(last.data)} · ` + (mesmoKg
-        ? `${esc(kgs[0])} kg × ${last.sets.map(s => esc(s.reps)).join(', ')}`
-        : last.sets.map(s => `${s.kg ? esc(s.kg) + '×' : ''}${esc(s.reps)}`).join(', '));
+        ? `${kgTxt(kgs[0])} kg × ${last.sets.map(s => esc(s.reps)).join(', ')}`
+        : last.sets.map(s => `${s.kg ? kgTxt(s.kg) + '×' : ''}${esc(s.reps)}`).join(', '));
       if(last.sets.length >= e.series && last.sets.every(s => (num(s.reps) ?? 0) >= e.reps[1]))
         hint = `<p class="hint">${IC.up}Topo da faixa: suba a carga</p>`;
     }
+    const alts = alternativas(e, lista);
+    const painel = trocando === e.orig ? `<div class="troca"><p class="troca-t">Aparelho ocupado? Troque só hoje</p><div class="chips">
+        ${e.trocado ? `<button type="button" class="chip" data-alt="" data-orig="${e.orig}">Voltar: ${esc(nomeEx(e.orig))}</button>` : ''}
+        ${alts.map(a => `<button type="button" class="chip" data-alt="${a.id}" data-orig="${e.orig}">${esc(a.nome)}</button>`).join('') || (e.trocado ? '' : '<span class="cs">Sem alternativas na biblioteca.</span>')}
+      </div></div>` : '';
     const linhas = sets.map((s, i) => {
       const ls = last && last.sets[i];
       const rot = `${esc(e.nome)}, série ${i + 1}`;
-      return `<div class="set"><span class="n">${String(i + 1).padStart(2, '0')}</span>
+      const ok = s.reps !== '';
+      const anima = recemMarcado === e.id + ':' + i ? 'pop' : '';
+      return `<div class="set ${ok ? 'ok' : ''}" data-row="${e.id}:${i}"><span class="n">${String(i + 1).padStart(2, '0')}</span>
         <label class="field"><input inputmode="decimal" aria-label="${rot}, carga" data-ex="${e.id}" data-i="${i}" data-f="kg" value="${esc(s.kg)}" placeholder="${ls && ls.kg ? esc(ls.kg) : '—'}"><small>kg</small></label>
         <label class="field"><input inputmode="numeric" aria-label="${rot}, repetições" data-ex="${e.id}" data-i="${i}" data-f="reps" value="${esc(s.reps)}" placeholder="${ls ? esc(ls.reps) : e.reps[0] + '–' + e.reps[1]}"><small>reps</small></label>
+        <button type="button" class="chk ${anima}" data-ok="${e.id}" data-i="${i}" aria-pressed="${ok}" aria-label="${ok ? `Desfazer série ${i + 1}` : (ls ? `Repetir ${esc(ls.kg ? ls.kg + ' kg × ' : '')}${esc(ls.reps)}` : `Marcar série ${i + 1}`)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
       </div>`;
     }).join('');
     return `<section class="card">
-      <div class="ex-head"><h2>${esc(e.nome)}</h2><span class="ex-meta">${e.series} × ${e.reps[0]}–${e.reps[1]}</span></div>
-      <p class="ultima">${ult}${e.obs ? ' · ' + esc(e.obs) : ''}</p>${hint}
+      <div class="ex-head"><h2>${esc(e.nome)}</h2><span class="ex-meta">${feitas}/${e.series} · ${e.series} × ${e.reps[0]}–${e.reps[1]}</span></div>
+      <div class="ex-sub"><p class="ultima">${ult}${e.obs ? ' · ' + esc(e.obs) : ''}</p>
+        <button type="button" class="trocar" data-trocar="${e.orig}" aria-expanded="${trocando === e.orig}">${trocando === e.orig ? 'Fechar' : (e.trocado ? 'Trocado' : 'Trocar')}</button></div>
+      ${hint}${painel}
       <div class="sets">${linhas}</div></section>`;
   }).join('');
+  recemFechado = null; recemMarcado = null;
   return cab('Treino de hoje', 'Treino ' + t, esc(p.foco)) +
-    `<div class="sec"><span>Exercícios</span><span>${p.ex.length} · ${totalSeries} séries · 1–2 da falha</span></div>
+    `<div class="sec"><span>Exercícios</span><span>${lista.length} · ${totalSeries} séries · 1–2 da falha</span></div>
+    <p class="dica">Toque no ✓ para repetir a última série. Digite só quando mudar.</p>
     <div class="lista-ex">${cards}</div>
-    <button type="button" class="btn" data-acao="concluir" data-t="${t}">Concluir treino</button>`;
+    <div class="barra-fixa">${barraProgresso(t)}<button type="button" class="btn-fixo" data-acao="concluir" data-t="${t}">Concluir</button></div>`;
+}
+function barraProgresso(t){
+  const rd = rascunho(t);
+  const lista = exerciciosDoDia(t);
+  const ok = lista.filter(e => completo(setsDe(rd, e))).length;
+  return `<div class="bf-info" id="bf-info"><p>${ok} de ${lista.length} exercícios</p>
+    <div class="bf-segs" style="grid-template-columns:repeat(${lista.length},minmax(0,1fr))">${lista.map(e => `<i class="${completo(setsDe(rd, e)) ? 'on' : ''}"></i>`).join('')}</div></div>`;
+}
+function atualizarBarra(t){
+  const el = $('#bf-info'); if(!el) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = barraProgresso(t);
+  el.replaceWith(tmp.firstElementChild);
+}
+
+/* ---------- tela acesa durante o treino ---------- */
+let wakeLock = null;
+async function gerirTela(){
+  const quer = aba === 'hoje' && !!tipoAtual() && !document.hidden;
+  try{
+    if(quer && !wakeLock && 'wakeLock' in navigator){
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } else if(!quer && wakeLock){
+      const w = wakeLock; wakeLock = null; await w.release();
+    }
+  }catch(e){ wakeLock = null; }
 }
 
 function telaCorrida(){
@@ -787,7 +1004,7 @@ function visaoSemana(){
       <td>${metaTxt(g, metaAcad(a))}<div class="bar"><i style="width:${Math.min(100, g / (metaAcad(a) || Math.max(3, g)) * 100)}%"></i></div></td>
       <td class="num">${k ? fmtNum(k) + ' km' : '—'}</td></tr>`;
   }
-  return `<div class="sec"><span>Esta semana</span></div>
+  return blocoMetas() + `<div class="sec"><span>Esta semana</span></div>
     <div class="stats">
       <div class="stat"><b>${metaTxt(acad, metaAcad(ini))}</b><span>academia</span></div>
       <div class="stat"><b>${metaTxt(corr.length, db.metas.corrida)}</b><span>corrida</span></div>
@@ -795,7 +1012,7 @@ function visaoSemana(){
     </div>
     <div class="sec"><span>Dias</span><span>R = corrida</span></div><div class="dias">${dias}</div>
     <div class="sec"><span>Últimas 8 semanas</span></div>
-    <div class="card"><table><tr><th>Semana de</th><th>Academia</th><th class="num">Corrida</th></tr>${linhas}</table></div>`;
+    <div class="card"><table><tr><th>Semana de</th><th>Academia</th><th class="num">Corrida</th></tr>${linhas}</table></div>` + blocoVolume();
 }
 
 function visaoMes(){
@@ -847,11 +1064,6 @@ function visaoMes(){
 /* =========================================================
    HISTÓRICO + DASHBOARD
    ========================================================= */
-function serieCarga(exId){
-  return db.sessoes.filter(s => s.ex && s.ex[exId]).map(s => {
-    const b = melhorSerie(s.ex[exId]); return { d: s.data, v: b ? b.kg : 0 };
-  }).filter(p => p.v > 0);
-}
 function subidasDeCarga(){
   const max = {}; let n = 0;
   for(const s of db.sessoes){
@@ -882,7 +1094,7 @@ function graficoLinha(pts){
   const ult = pts[pts.length - 1];
   const lab = `<text class="val" x="${x(pts.length - 1)}" y="${y(ult.v) - 12}" text-anchor="end">${fmtNum(ult.v)} kg</text>`;
   const xs = `<text x="${L}" y="${H - 8}">${fmtData(pts[0].d)}</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${fmtData(ult.d)}</text>`;
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Carga máxima por treino, de ${fmtNum(pts[0].v)} a ${fmtNum(ult.v)} kg">${g}<polyline class="linha" points="${linha}"/>${ptsSvg}${lab}${xs}</svg>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolução por treino, de ${fmtNum(pts[0].v)} a ${fmtNum(ult.v)} kg">${g}<polyline class="linha" points="${linha}"/>${ptsSvg}${lab}${xs}</svg>`;
 }
 function graficoFrequencia(){
   const W = 600, H = 220, L = 30, R = 10, T = 18, B = 34, N = 12;
@@ -908,6 +1120,55 @@ function graficoFrequencia(){
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Treinos de academia por semana nas últimas ${N} semanas">${meta}${barras}${xs}</svg>`;
 }
 
+/* ---------- força estimada (Epley) e carga máxima ---------- */
+let dashModo = 'forca';
+const forcaEst = (kg, r) => kg * (1 + r / 30);
+function serieCarga(exId, modo = dashModo){
+  return db.sessoes.filter(s => s.ex && s.ex[exId]).map(s => {
+    let v = 0;
+    for(const z of s.ex[exId]){
+      const kg = num(z.kg) || 0, r = num(z.reps) || 0;
+      if(!kg) continue;
+      v = Math.max(v, modo === 'forca' ? forcaEst(kg, r) : kg);
+    }
+    return { d: s.data, v };
+  }).filter(p => p.v > 0);
+}
+
+/* ---------- séries por músculo ---------- */
+let volModo = 'semana';
+function blocoVolume(){
+  const ini = segunda(new Date());
+  let a, b, div;
+  if(volModo === 'semana'){ a = ini; b = new Date(ini); b.setDate(b.getDate() + 7); div = 1; }
+  else { a = new Date(ini); a.setDate(a.getDate() - 28); b = ini; div = 4; }
+  const conta = {};
+  db.sessoes.forEach(s => {
+    const d = new Date(s.data); if(!s.ex || d < a || d >= b) return;
+    for(const [id, sets] of Object.entries(s.ex)){ const g = BIB_ID[id]?.g; if(g) conta[g] = (conta[g] || 0) + sets.length; }
+  });
+  const doPlanoG = new Set();
+  plano().rotacao.forEach(k => plano().treinos[k].ex.forEach(e => { const g = BIB_ID[e.id]?.g; if(g) doPlanoG.add(g); }));
+  const grupos = Object.keys(GRUPOS).filter(g => doPlanoG.has(g) || conta[g]);
+  if(!grupos.length) return '';
+  const linhas = grupos.map(g => {
+    const v = Math.round((conta[g] || 0) / div * 10) / 10;
+    const cls = v >= 10 ? 'na-faixa' : (v ? 'abaixo' : '');
+    return `<div class="vol-l"><span>${GRUPOS[g]}</span>
+      <div class="vol-b" role="img" aria-label="${GRUPOS[g]}: ${fmtNum(v)} séries"><i class="faixa"></i><i class="valor ${cls}" style="width:${Math.min(100, v / 24 * 100)}%"></i></div>
+      <b>${fmtNum(v)}</b></div>`;
+  }).join('');
+  return `<div class="sec sec-vol"><span>Séries por músculo</span>
+    <div class="toggle mini" role="group" aria-label="Período">
+      <button type="button" data-vol="semana" class="${volModo === 'semana' ? 'on' : ''}" aria-pressed="${volModo === 'semana'}">Esta semana</button>
+      <button type="button" data-vol="media" class="${volModo === 'media' ? 'on' : ''}" aria-pressed="${volModo === 'media'}">Média 4 sem.</button></div></div>
+    <section class="card vol">
+      <div class="vol-l vol-esc" aria-hidden="true"><span></span><div class="vol-escala"><span style="left:41.67%">10</span><span style="left:83.33%">20</span></div><b></b></div>
+      ${linhas}
+      <p class="m-frase vol-nota">Faixa verde: 10–20 séries por músculo por semana, referência da literatura para hipertrofia. Abaixo dela ainda há ganho, só mais devagar.</p>
+    </section>`;
+}
+
 function telaHistorico(){
   const topo = cab(`${db.sessoes.length} registros`, 'Histórico');
   if(!db.sessoes.length) return topo + `<p class="vazio">Nenhum treino registrado ainda.</p>`;
@@ -926,8 +1187,15 @@ function telaHistorico(){
   } else {
     const pts = serieCarga(dashEx);
     const opts = exs.map(id => `<option value="${id}" ${id === dashEx ? 'selected' : ''}>${esc(nomeEx(id))}</option>`).join('');
-    cargaCard = `<div class="card-head"><span class="t">Carga máxima</span><select id="dash-ex" aria-label="Exercício">${opts}</select></div>` +
-      (pts.length >= 2 ? `<div class="chart">${graficoLinha(pts)}</div>` : `<p class="chart-vazio">Mais um treino com ${esc(nomeEx(dashEx))} e a linha aparece aqui.</p>`);
+    const ult = pts[pts.length - 1], pri = pts[0];
+    const delta = ult && pri ? ult.v - pri.v : 0;
+    cargaCard = `<div class="card-head"><select id="dash-ex" aria-label="Exercício">${opts}</select>
+        <div class="toggle mini" role="group" aria-label="Medida">
+          <button type="button" data-modo="forca" class="${dashModo === 'forca' ? 'on' : ''}" aria-pressed="${dashModo === 'forca'}">Força</button>
+          <button type="button" data-modo="carga" class="${dashModo === 'carga' ? 'on' : ''}" aria-pressed="${dashModo === 'carga'}">Carga</button></div></div>
+      ${ult ? `<div class="forca-n"><b>${fmtNum(ult.v)}</b><span>kg</span>${pts.length >= 2 ? `<em>${delta >= 0 ? '+' : ''}${fmtNum(delta)} kg desde ${fmtData(pri.d)}</em>` : ''}</div>` : ''}
+      <p class="cs">${dashModo === 'forca' ? 'Força estimada (1RM) da melhor série: junta peso e repetições, então 40×12 e 45×5 ficam comparáveis.' : 'Maior peso usado em cada treino.'}</p>` +
+      (pts.length >= 2 ? `<div class="chart" style="margin-top:8px">${graficoLinha(pts)}</div>` : `<p class="chart-vazio">Mais um treino com ${esc(nomeEx(dashEx))} e a linha aparece aqui.</p>`);
   }
 
   const itens = db.sessoes.slice().reverse().map(s => {
@@ -1004,7 +1272,9 @@ function telaPlano(){
           <button type="button" class="btn sec-btn" data-acao="instalar">Instalar app</button></div></div>
       <div><div class="sec"><span>Backup</span></div>
         <div class="card txt">
-          <p>Registros e planos ficam neste navegador. Exporte de vez em quando para não perder ao trocar de aparelho.</p>
+          <div class="backup-st"><span>Armazenamento protegido</span><span class="${db.persistido || ehApp() ? 'st-ok' : ''}">${db.persistido ? '✓ ativo' : (ehApp() ? '✓ app instalado' : 'não confirmado')}</span></div>
+          <div class="backup-st"><span>Último backup</span><span class="${db.ultimoBackup && diasDesde(db.ultimoBackup) < 30 ? 'st-ok' : 'st-alerta'}">${db.ultimoBackup ? (diasDesde(db.ultimoBackup) ? 'há ' + diasDesde(db.ultimoBackup) + ' dias' : 'hoje') : 'nunca'}</span></div>
+          <p>Registros, planos e metas ficam neste navegador. Exporte de vez em quando para não perder ao trocar de aparelho.</p>
           <button type="button" class="btn sec-btn" data-acao="exportar">Exportar backup</button>
           <button type="button" class="btn sec-btn" data-acao="importar" style="margin-top:8px">Importar backup</button>
           <input type="file" id="arq" accept="application/json,.json" hidden>
@@ -1282,16 +1552,20 @@ function render(){
     if(on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
   const ib = $('#instalarBox'); if(ib) ib.style.display = pedidoInstalar ? 'block' : 'none';
+  gerirTela();
 }
 
 /* tema */
-function tema(){ try{ return localStorage.getItem(TEMA_KEY) === 'escuro' ? 'escuro' : 'claro'; }catch(e){ return 'claro'; } }
+function tema(){ try{ const t = localStorage.getItem(TEMA_KEY); return ['claro', 'escuro', 'auto'].includes(t) ? t : 'claro'; }catch(e){ return 'claro'; } }
+const mqEscuro = matchMedia('(prefers-color-scheme: dark)');
 function aplicarTema(t){
-  document.documentElement.dataset.theme = t;
-  $('#themeColor').setAttribute('content', t === 'escuro' ? '#1c1c1b' : '#f2ece0');
+  const real = t === 'auto' ? (mqEscuro.matches ? 'escuro' : 'claro') : t;
+  document.documentElement.dataset.theme = real;
+  $('#themeColor').setAttribute('content', real === 'escuro' ? '#1c1c1b' : '#f2ece0');
   document.querySelectorAll('.tema button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tema === t)));
   try{ localStorage.setItem(TEMA_KEY, t); }catch(e){}
 }
+mqEscuro.addEventListener?.('change', () => { if(tema() === 'auto') aplicarTema('auto'); });
 document.querySelector('.tema').addEventListener('click', e => {
   const b = e.target.closest('button[data-tema]'); if(b) aplicarTema(b.dataset.tema);
 });
@@ -1299,15 +1573,25 @@ document.querySelector('.tema').addEventListener('click', e => {
 document.querySelector('nav.menu').addEventListener('click', e => {
   const b = e.target.closest('button[data-aba]'); if(!b) return;
   if((aba === 'editor') && !confirm('Sair do editor sem salvar?')) return;
-  aba = b.dataset.aba; ed = null; me = null; render(); window.scrollTo(0, 0);
+  aba = b.dataset.aba; ed = null; me = null; trocando = null; render(); window.scrollTo(0, 0);
 });
 
 $('#app').addEventListener('input', e => {
   const el = e.target;
   if(el.dataset.ex){
     const t = tipoAtual();
-    db.rascunhos[rascKey(t)].ex[el.dataset.ex][+el.dataset.i][el.dataset.f] = el.value.trim();
+    const rd = rascunho(t);
+    const e = exerciciosDoDia(t).find(x => x.id === el.dataset.ex);
+    const sets = setsDe(rd, e);
+    sets[+el.dataset.i][el.dataset.f] = el.value.trim();
     save();
+    const row = el.closest('.set');
+    if(row){
+      const ok = sets[+el.dataset.i].reps !== '';
+      row.classList.toggle('ok', ok);
+      row.querySelector('.chk')?.setAttribute('aria-pressed', String(ok));
+    }
+    atualizarBarra(t);
   } else if(el.dataset.run){
     db.rascunhos.corrida[el.dataset.run] = el.value.trim(); save();
     const p = pace(num(db.rascunhos.corrida.km), num(db.rascunhos.corrida.min));
@@ -1367,6 +1651,35 @@ $('#app').addEventListener('click', e => {
   if(el.dataset.visao){ visao = el.dataset.visao; mesOffset = 0; render(); return; }
   if(el.dataset.mes){ mesOffset = Math.min(0, mesOffset + +el.dataset.mes); render(); return; }
   if(el.dataset.share){ compartilhar(el.dataset.share); return; }
+  if(el.dataset.ok){
+    const t = tipoAtual(); if(!t) return;
+    const rd = rascunho(t);
+    const e = exerciciosDoDia(t).find(x => x.id === el.dataset.ok);
+    const sets = setsDe(rd, e); const i = +el.dataset.i; const s = sets[i];
+    if(s.reps !== ''){ sets[i] = { kg: '', reps: '' }; }
+    else {
+      const ls = ultimo(e.id)?.sets[i];
+      const kg = s.kg || (ls ? ls.kg || '' : '');
+      const reps = ls ? ls.reps : '';
+      if(!reps){ const inp = el.closest('.set').querySelector('[data-f="reps"]'); inp?.focus(); toast('Digite as repetições'); return; }
+      sets[i] = { kg, reps };
+      recemMarcado = e.id + ':' + i;
+      vibrar(12);
+      if(completo(sets)){ abertos.delete(e.id); recemFechado = e.id; recemMarcado = null; }
+    }
+    save(); render(); return;
+  }
+  if(el.dataset.abrir){ abertos.add(el.dataset.abrir); render(); return; }
+  if(el.dataset.trocar){ trocando = trocando === el.dataset.trocar ? null : el.dataset.trocar; render(); return; }
+  if(el.dataset.alt != null && el.dataset.orig){
+    const rd = rascunho(tipoAtual());
+    if(el.dataset.alt) rd.trocas[el.dataset.orig] = el.dataset.alt; else delete rd.trocas[el.dataset.orig];
+    trocando = null; save(); render(); return;
+  }
+  if(el.dataset.ir){ aba = el.dataset.ir; visao = 'semana'; render(); window.scrollTo(0, 0); return; }
+  if(el.dataset.vol){ volModo = el.dataset.vol; render(); return; }
+  if(el.dataset.modo){ dashModo = el.dataset.modo; render(); return; }
+  if(el.dataset.so){ soInstalar = el.dataset.so; render(); return; }
   if(el.dataset.step && me){
     const c = el.dataset.step, passo = c === 'kmMes' ? 5 : 1, max = c === 'kmMes' ? 500 : 7;
     me[c] = Math.min(max, Math.max(0, me[c] + passo * +el.dataset.d));
@@ -1399,25 +1712,35 @@ $('#app').addEventListener('click', e => {
   }
   const acao = el.dataset.acao;
   if(acao === 'concluir'){
-    const t = el.dataset.t; const rd = db.rascunhos[rascKey(t)]; const ex = {};
-    const ordem = plano().treinos[t].ex.map(x => x.id);
-    for(const id of ordem){
-      const sets = rd.ex[id] || [];
-      const feitos = sets.filter(s => s.reps !== '').map(s => ({ kg: s.kg, reps: s.reps }));
-      if(feitos.length) ex[id] = feitos;
+    const t = el.dataset.t; const rd = rascunho(t); const ex = {};
+    for(const e of exerciciosDoDia(t)){
+      const feitos = setsDe(rd, e).filter(s => s.reps !== '').map(s => ({ kg: s.kg, reps: s.reps }));
+      if(feitos.length) ex[e.id] = feitos;
     }
     if(!Object.keys(ex).length){ toast('Preencha ao menos uma série'); return; }
     const id = Date.now();
     db.sessoes.push({ id, data: new Date().toISOString(), tipo: t, planoId: db.planoAtivo, nome: 'Treino ' + t, foco: plano().treinos[t].foco, ex });
-    delete db.rascunhos[rascKey(t)]; limparEscolha(); ultimaSalva = id; save(); render(); window.scrollTo(0, 0);
+    db.desfazer = { id, rk: rascKey(t), rascunho: clone(rd), tipo: t, em: Date.now() };
+    delete db.rascunhos[rascKey(t)]; limparEscolha(); abertos.clear(); trocando = null; ultimaSalva = id;
+    vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0);
   }
   if(acao === 'concluir-corrida'){
     const rd = db.rascunhos.corrida;
     if(!num(rd.km)){ toast('Informe a distância'); return; }
     const id = Date.now();
     db.sessoes.push({ id, data: new Date().toISOString(), tipo: 'corrida', corrida: { ...rd } });
-    delete db.rascunhos.corrida; limparEscolha(); ultimaSalva = id; save(); render(); window.scrollTo(0, 0);
+    db.desfazer = { id, rk: 'corrida', rascunho: clone(rd), tipo: 'corrida', em: Date.now() };
+    delete db.rascunhos.corrida; limparEscolha(); ultimaSalva = id;
+    vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0);
   }
+  if(acao === 'desfazer' && db.desfazer){
+    const d = db.desfazer;
+    db.sessoes = db.sessoes.filter(s => s.id !== d.id);
+    db.rascunhos[d.rk] = d.rascunho; escolherTipo(d.tipo);
+    db.desfazer = null; ultimaSalva = null; save(); render(); window.scrollTo(0, 0); toast('Registro desfeito');
+  }
+  if(acao === 'adiar-backup'){ const x = new Date(); x.setDate(x.getDate() + 7); db.backupAdiadoAte = x.toISOString(); save(); render(); }
+  if(acao === 'fechar-instalar'){ db.vistoInstalar = true; save(); render(); }
   if(acao === 'fechar-banner'){ ultimaSalva = null; render(); }
   if(acao === 'editar'){ abrirEditor(plano()); render(); window.scrollTo(0, 0); }
   if(acao === 'novo'){ abrirEditor(null); render(); window.scrollTo(0, 0); }
@@ -1442,6 +1765,7 @@ $('#app').addEventListener('click', e => {
     a.href = URL.createObjectURL(blob);
     a.download = `treinohoje-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click(); URL.revokeObjectURL(a.href);
+    db.ultimoBackup = new Date().toISOString(); db.backupAdiadoAte = null; save(); render(); toast('Backup salvo');
   }
   if(acao === 'importar') $('#arq').click();
   if(acao === 'instalar' && pedidoInstalar){ pedidoInstalar.prompt(); pedidoInstalar.userChoice.finally(() => { pedidoInstalar = null; render(); }); }
@@ -1450,6 +1774,7 @@ $('#app').addEventListener('click', e => {
 /* atualiza a data ao voltar para o app num outro dia */
 document.addEventListener('visibilitychange', () => {
   if(!document.hidden && aba !== 'editor' && aba !== 'metas' && !document.activeElement?.matches('input,select')) render();
+  else gerirTela();
 });
 
 /* app instalável */
@@ -1457,6 +1782,14 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedido
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
+
+/* pede ao navegador para não apagar os dados por falta de uso */
+try{
+  if(navigator.storage && navigator.storage.persisted){
+    navigator.storage.persisted().then(p => p ? true : (navigator.storage.persist ? navigator.storage.persist() : false))
+      .then(r => { if(db.persistido !== !!r){ db.persistido = !!r; save(); } }).catch(() => {});
+  }
+}catch(e){}
 
 aplicarTema(tema());
 render();
