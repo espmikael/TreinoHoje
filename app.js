@@ -360,14 +360,15 @@ function metasLinha(){
   }
   return `<button type="button" class="metas-linha" data-ir="semana"><span>${txt}</span><span class="ml-ver">ver metas →</span></button>`;
 }
-function folhaInstalar(){
-  if(ehApp() || db.vistoInstalar || !matchMedia('(pointer: coarse)').matches) return '';
+let instalarAberto = false;   // aberto pelo botão "Como instalar" em Ajustes
+function folhaInstalar(forcar = false){
+  if(!forcar && (ehApp() || db.vistoInstalar || !matchMedia('(pointer: coarse)').matches)) return '';
   const passos = soInstalar === 'ios'
     ? ['Abra o site no Safari', 'Toque em Compartilhar (quadrado com seta)', 'Escolha “Adicionar à Tela de Início”']
     : ['Abra o site no Chrome', 'Toque no menu ⋮ no canto superior', 'Escolha “Instalar app”'];
   return `<div class="folha-fundo"><section class="folha" role="dialog" aria-modal="true" aria-labelledby="folha-tit">
     <div class="folha-alca" aria-hidden="true"></div>
-    <p class="rot">Primeiro uso</p><h2 id="folha-tit">Instale o app</h2>
+    <p class="rot">${forcar ? 'Passo a passo' : 'Primeiro uso'}</p><h2 id="folha-tit">Instale o app</h2>
     <p class="cs" style="font-size:14px;margin-top:8px">Instalado, ele abre em tela cheia, funciona sem internet e o celular não apaga seus registros por falta de uso.</p>
     <div class="seg n2" role="tablist" aria-label="Sistema" style="margin-top:16px">
       <button type="button" role="tab" data-so="ios" aria-selected="${soInstalar === 'ios'}" class="${soInstalar === 'ios' ? 'on' : ''}">iPhone</button>
@@ -375,7 +376,7 @@ function folhaInstalar(){
     </div>
     <ol class="passos">${passos.map((p, i) => `<li><span>${i + 1}</span>${p}</li>`).join('')}</ol>
     ${pedidoInstalar ? `<button type="button" class="btn" data-acao="instalar" style="margin-top:16px">Instalar agora</button>` : ''}
-    <button type="button" class="btn sec-btn" data-acao="fechar-instalar" style="margin-top:10px">Agora não</button>
+    <button type="button" class="btn sec-btn" data-acao="fechar-instalar" style="margin-top:10px">${forcar ? 'Fechar' : 'Agora não'}</button>
   </section></div>`;
 }
 
@@ -804,7 +805,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v10 · out/2026';
+const VERSAO = 'v12 · out/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -838,7 +839,9 @@ function telaPlano(){
         <div class="card txt">
           <div class="backup-st"><span>Instalado na tela inicial</span><span class="${ehApp() ? 'st-ok' : ''}">${ehApp() ? '✓ sim' : 'não'}</span></div>
           <div class="backup-st"><span>Versão</span><span>${VERSAO}</span></div>
-          <div class="instalar" id="instalarBox"><button type="button" class="mini-btn" data-acao="instalar" style="margin-top:8px">Instalar app</button></div>
+          ${ehApp() ? '' : `<p class="cs" style="margin-top:10px">Instalado, ele abre em tela cheia, funciona sem internet e o celular não apaga seus registros por falta de uso.</p>
+          <div class="acoes"><button type="button" class="mini-btn" data-acao="como-instalar">Como instalar</button>
+          <span class="instalar" id="instalarBox"><button type="button" class="mini-btn" data-acao="instalar">Instalar agora</button></span></div>`}
         </div></div>
     </div>`;
   }
@@ -944,14 +947,14 @@ function salvarEditor(){
 
 /* ---------- gerador ---------- */
 const SLOTS = {
-  peitoC: ['supino-reto', 'supino-reto-halteres'], peitoInc: ['supino-inclinado', 'supino-inclinado-barra'], peitoIso: ['voador', 'crucifixo-halteres'],
-  ombroC: ['desenvolvimento', 'desenvolvimento-maquina'], ombroIso: ['elevacao-lateral', 'elevacao-lateral-polia'],
-  triceps: ['triceps-pulley', 'triceps-frances', 'triceps-testa', 'mergulho'],
-  costasV: ['barra-fixa', 'puxada-alta'], costasH: ['remada', 'remada-maquina', 'remada-baixa'], postOmbro: ['crucifixo-inverso', 'face-pull'],
-  biceps: ['rosca-direta', 'rosca-martelo', 'rosca-alternada', 'rosca-scott'],
-  quadC: ['agachamento', 'leg-press', 'bulgaro'], postC: ['stiff', 'stiff-unilateral'], gluteo: ['elevacao-pelvica'],
-  quadIso: ['extensora', 'afundo'], postIso: ['flexora', 'stiff-unilateral'], pant: ['panturrilha', 'panturrilha-sentado'],
-  core: ['abdominal', 'elevacao-pernas'],
+  peitoC: ['supino-reto', 'supino-reto-halteres', 'supino-maquina'], peitoInc: ['supino-inclinado', 'supino-inclinado-barra'], peitoIso: ['voador', 'crossover', 'crucifixo-halteres'],
+  ombroC: ['desenvolvimento', 'desenvolvimento-barra', 'desenvolvimento-maquina'], ombroIso: ['elevacao-lateral', 'elevacao-lateral-polia'],
+  triceps: ['triceps-overhead-polia', 'triceps-pulley', 'triceps-frances', 'triceps-testa', 'mergulho'],
+  costasV: ['barra-fixa', 'puxada-alta', 'puxada-neutra'], costasH: ['remada', 'remada-cavalinho', 'remada-maquina', 'remada-baixa'], postOmbro: ['crucifixo-inverso', 'face-pull'],
+  biceps: ['rosca-direta', 'rosca-inclinada', 'rosca-martelo', 'rosca-alternada', 'rosca-scott'],
+  quadC: ['agachamento', 'hack-smith', 'leg-press', 'bulgaro'], postC: ['stiff', 'stiff-unilateral'], gluteo: ['elevacao-pelvica'],
+  quadIso: ['extensora', 'afundo'], postIso: ['flexora-sentada', 'flexora', 'stiff-unilateral'], pant: ['panturrilha', 'panturrilha-leg-press', 'panturrilha-sentado'],
+  core: ['abdominal', 'elevacao-pernas', 'prancha', 'pallof'],
 };
 const SESSOES = {
   push:  { foco: 'Peito, ombro e tríceps', s: ['peitoC', 'ombroC', 'peitoInc', 'ombroIso', 'triceps', 'triceps', 'peitoIso'] },
@@ -1135,14 +1138,16 @@ async function compartilhar(id){
    ========================================================= */
 function render(){
   const telas = { hoje: telaHoje, semana: telaSemana, historico: telaHistorico, plano: telaPlano, editor: telaEditor, gerador: telaGerador, metas: telaMetas };
-  $('#app').innerHTML = telas[aba]() + (fichaAberta ? folhaFicha(fichaAberta) : '');
+  let html = telas[aba]() + (fichaAberta ? folhaFicha(fichaAberta) : '');
+  if(instalarAberto && !html.includes('folha-fundo')) html += folhaInstalar(true);
+  $('#app').innerHTML = html;
   const navAba = (aba === 'editor' || aba === 'gerador' || aba === 'metas') ? 'plano' : aba;
   document.querySelectorAll('nav.menu button').forEach(b => {
     const on = b.dataset.aba === navAba;
     b.classList.toggle('on', on);
     if(on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
-  const ib = $('#instalarBox'); if(ib) ib.style.display = pedidoInstalar ? 'block' : 'none';
+  const ib = $('#instalarBox'); if(ib) ib.style.display = pedidoInstalar ? 'inline-flex' : 'none';
   gerirTela();
 }
 
@@ -1351,7 +1356,8 @@ $('#app').addEventListener('click', e => {
     db.desfazer = null; ultimaSalva = null; save(); render(); window.scrollTo(0, 0); toast('Registro desfeito');
   }
   if(acao === 'adiar-backup'){ const x = new Date(); x.setDate(x.getDate() + 7); db.backupAdiadoAte = x.toISOString(); save(); render(); }
-  if(acao === 'fechar-instalar'){ db.vistoInstalar = true; save(); render(); }
+  if(acao === 'fechar-instalar'){ db.vistoInstalar = true; instalarAberto = false; save(); render(); }
+  if(acao === 'como-instalar'){ instalarAberto = true; render(); }
   if(acao === 'fechar-banner'){ ultimaSalva = null; render(); }
   if(acao === 'editar'){ abrirEditor(plano()); render(); window.scrollTo(0, 0); }
   if(acao === 'novo'){ abrirEditor(null); render(); window.scrollTo(0, 0); }
