@@ -61,8 +61,6 @@ main{max-width:1040px;margin:0 auto;padding:8px 16px 32px}
 .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:10px;border:1px solid var(--line);background:var(--surface)}
 .seg button{position:relative;border:0;border-radius:7px;height:44px;background:transparent;font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:19px;text-transform:uppercase;letter-spacing:.03em}
 .seg button.on{background:var(--brand);color:var(--brand-ink)}
-.seg .dot{position:absolute;top:7px;right:9px;width:6px;height:6px;border-radius:50%;background:var(--brand)}
-.seg button.on .dot{background:var(--brand-ink)}
 
 .cab{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
 .rot{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--brand)}
@@ -208,6 +206,15 @@ details.card summary::-webkit-details-marker{display:none}
 .seg.n7{grid-template-columns:repeat(7,1fr)}
 .seg.n6 button,.seg.n7 button{font-size:16px}
 
+/* ---------- escolha do treino ---------- */
+.escolhas{display:grid;gap:8px}
+.escolha{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.escolha:hover{border-color:var(--brand)}
+.e-letra{flex:none;width:48px;height:48px;border-radius:8px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:28px}
+.e-txt{flex:1;min-width:0;display:flex;flex-direction:column}
+.e-nome{font-family:"Big Shoulders Display",sans-serif;font-weight:800;font-size:22px;line-height:1;text-transform:uppercase}
+.e-foco{font-size:13px;color:var(--muted);margin-top:4px}
+.e-quando{flex:none;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);text-align:right;max-width:96px}
 /* ---------- metas ---------- */
 .convite{display:flex;align-items:center;gap:10px;padding:14px 8px 14px 16px;border-radius:10px;border:1px dashed var(--rule);margin-bottom:16px}
 .convite > div{flex:1;min-width:0}
@@ -276,6 +283,7 @@ details.card summary::-webkit-details-marker{display:none}
   .btn{max-width:340px;margin-top:20px}
   .plano-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
   .stats,.dias{max-width:640px}
+  .escolhas{grid-template-columns:repeat(2,1fr);gap:12px}
   .metas-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;align-items:start}
   .metas-grid .card{margin-bottom:0}
   .metas-cfg{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
@@ -410,7 +418,7 @@ let db = load();
 
 /* estado da interface */
 let aba = 'hoje';
-let tipoSel = null;
+let tipoSel = (db.hoje && db.hoje.dia) ? db.hoje.tipo : null;
 let pedidoInstalar = null;
 let ultimaSalva = null;          // id do registro recém-salvo (banner de compartilhar)
 let visao = 'semana';            // semana | mes
@@ -435,13 +443,6 @@ const IC = {
 function plano(){ return db.planos[db.planoAtivo]; }
 function rotacao(){ return plano().rotacao; }
 function doPlano(s, p){ return (s.planoId || 'padrao') === p.id; }
-function proximo(){
-  const p = plano();
-  const g = db.sessoes.filter(s => s.tipo !== 'corrida' && doPlano(s, p));
-  if(!g.length) return p.rotacao[0];
-  const i = p.rotacao.indexOf(g[g.length - 1].tipo);
-  return i < 0 ? p.rotacao[0] : p.rotacao[(i + 1) % p.rotacao.length];
-}
 function ultimo(exId){
   for(let i = db.sessoes.length - 1; i >= 0; i--){
     const s = db.sessoes[i];
@@ -644,29 +645,55 @@ function salvarMetas(){
 /* =========================================================
    HOJE
    ========================================================= */
+function diaISO(d = new Date()){ return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function escolherTipo(k){ tipoSel = k; db.hoje = { dia: diaISO(), tipo: k }; save(); }
+function limparEscolha(){ tipoSel = null; db.hoje = null; }
+/* a escolha do treino vale só para o dia em que foi feita */
+function tipoAtual(){
+  if(!db.hoje || db.hoje.dia !== diaISO()){ tipoSel = null; db.hoje = null; }
+  const rot = rotacao();
+  return (tipoSel && (tipoSel === 'corrida' || rot.includes(tipoSel))) ? tipoSel : null;
+}
+function quandoFoi(k){
+  const p = plano();
+  for(let i = db.sessoes.length - 1; i >= 0; i--){
+    const s = db.sessoes[i];
+    if(k === 'corrida' ? s.tipo === 'corrida' : (s.tipo === k && doPlano(s, p))){
+      const dias = Math.round((new Date(diaISO()) - new Date(diaISO(new Date(s.data)))) / 864e5);
+      return dias === 0 ? 'feito hoje' : dias === 1 ? 'ontem' : `há ${dias} dias`;
+    }
+  }
+  return 'nunca';
+}
 function telaHoje(){
-  const prox = proximo();
   const rot = rotacao();
   const t = tipoAtual();
   const keys = [...rot, 'corrida'];
-  const seg = keys.map(k =>
-    `<button type="button" role="tab" aria-selected="${k === t}" data-tipo="${k}" class="${k === t ? 'on' : ''}">${k === 'corrida' ? 'Corrida' : k}${k === prox ? '<span class="dot" aria-label="próximo da rotação"></span>' : ''}</button>`
-  ).join('');
   const s = ultimaSalva && db.sessoes.find(x => x.id === ultimaSalva);
   const banner = s ? `<div class="banner" role="status"><p>${esc(tituloSessao(s).nome)} salvo</p>
       <button type="button" class="mini-btn" data-share="${s.id}">${IC.share}Compartilhar</button>
       <button type="button" class="x-btn" data-acao="fechar-banner" aria-label="Fechar">${IC.x}</button></div>` : '';
+  if(!t){
+    const opcoes = keys.map(k => {
+      const foco = k === 'corrida' ? 'Cardio' : plano().treinos[k].foco;
+      return `<button type="button" class="escolha" data-tipo="${k}">
+        <span class="e-letra">${k === 'corrida' ? 'R' : k}</span>
+        <span class="e-txt"><span class="e-nome">${k === 'corrida' ? 'Corrida' : 'Treino ' + k}</span><span class="e-foco">${esc(foco)}</span></span>
+        <span class="e-quando">${quandoFoi(k)}</span></button>`;
+    }).join('');
+    return banner + blocoMetas() + cab('Hoje', 'Qual treino?') +
+      `<div class="sec"><span>Escolha o de hoje</span><span>${esc(plano().nome)}</span></div><div class="escolhas">${opcoes}</div>`;
+  }
+  const seg = keys.map(k =>
+    `<button type="button" role="tab" aria-selected="${k === t}" data-tipo="${k}" class="${k === t ? 'on' : ''}">${k === 'corrida' ? 'Corrida' : k}</button>`
+  ).join('');
   return banner + blocoMetas() + `<div class="seg n${keys.length}" role="tablist" aria-label="Treino">${seg}</div>` +
-    (t === 'corrida' ? telaCorrida() : telaTreino(t, t === prox));
+    (t === 'corrida' ? telaCorrida() : telaTreino(t));
 }
 
-function tipoAtual(){
-  const rot = rotacao();
-  return (tipoSel && (tipoSel === 'corrida' || rot.includes(tipoSel))) ? tipoSel : proximo();
-}
 function rascKey(t){ return db.planoAtivo + ':' + t; }
 
-function telaTreino(t, ehProx){
+function telaTreino(t){
   const p = plano().treinos[t];
   const rk = rascKey(t);
   const rd = db.rascunhos[rk] || (db.rascunhos[rk] = { ex: {} });
@@ -701,7 +728,7 @@ function telaTreino(t, ehProx){
       <p class="ultima">${ult}${e.obs ? ' · ' + esc(e.obs) : ''}</p>${hint}
       <div class="sets">${linhas}</div></section>`;
   }).join('');
-  return cab(ehProx ? 'Treino de hoje' : 'Fora da rotação', 'Treino ' + t, esc(p.foco)) +
+  return cab('Treino de hoje', 'Treino ' + t, esc(p.foco)) +
     `<div class="sec"><span>Exercícios</span><span>${p.ex.length} · ${totalSeries} séries · 1–2 da falha</span></div>
     <div class="lista-ex">${cards}</div>
     <button type="button" class="btn" data-acao="concluir" data-t="${t}">Concluir treino</button>`;
@@ -1050,7 +1077,7 @@ function salvarEditor(){
     })};
   });
   db.planos[id] = { id, nome, rotacao: rot, treinos };
-  db.planoAtivo = id; tipoSel = null; ed = null; aba = 'plano';
+  db.planoAtivo = id; limparEscolha(); ed = null; aba = 'plano';
   save(); render(); window.scrollTo(0, 0); toast('Plano salvo e ativado');
 }
 
@@ -1299,7 +1326,7 @@ $('#app').addEventListener('input', e => {
 
 $('#app').addEventListener('change', e => {
   const el = e.target;
-  if(el.id === 'plano-ativo'){ db.planoAtivo = el.value; tipoSel = null; save(); render(); toast('Plano ativado'); return; }
+  if(el.id === 'plano-ativo'){ db.planoAtivo = el.value; limparEscolha(); save(); render(); toast('Plano ativado'); return; }
   if(el.id === 'dash-ex'){ dashEx = el.value; render(); return; }
   if(el.dataset.mf && me){ me.form[el.dataset.mf] = el.value; return; }
   if(el.dataset.addEx != null && ed){
@@ -1335,7 +1362,7 @@ $('#app').addEventListener('change', e => {
 
 $('#app').addEventListener('click', e => {
   const el = e.target.closest('button'); if(!el || el.disabled) return;
-  if(el.dataset.tipo){ tipoSel = el.dataset.tipo === proximo() ? null : el.dataset.tipo; render(); return; }
+  if(el.dataset.tipo){ escolherTipo(el.dataset.tipo); render(); window.scrollTo(0, 0); return; }
   if(el.dataset.sens){ db.rascunhos.corrida.sens = db.rascunhos.corrida.sens === el.dataset.sens ? '' : el.dataset.sens; save(); render(); return; }
   if(el.dataset.visao){ visao = el.dataset.visao; mesOffset = 0; render(); return; }
   if(el.dataset.mes){ mesOffset = Math.min(0, mesOffset + +el.dataset.mes); render(); return; }
@@ -1366,7 +1393,7 @@ $('#app').addEventListener('click', e => {
       if(!confirm(`Excluir o plano "${ed.nome}"? Os registros continuam no histórico.`)) return;
       delete db.planos[ed.id];
       if(db.planoAtivo === ed.id) db.planoAtivo = Object.keys(db.planos)[0];
-      ed = null; aba = 'plano'; tipoSel = null; save(); render(); toast('Plano excluído'); return;
+      ed = null; aba = 'plano'; limparEscolha(); save(); render(); toast('Plano excluído'); return;
     }
     render(); return;
   }
@@ -1382,14 +1409,14 @@ $('#app').addEventListener('click', e => {
     if(!Object.keys(ex).length){ toast('Preencha ao menos uma série'); return; }
     const id = Date.now();
     db.sessoes.push({ id, data: new Date().toISOString(), tipo: t, planoId: db.planoAtivo, nome: 'Treino ' + t, foco: plano().treinos[t].foco, ex });
-    delete db.rascunhos[rascKey(t)]; tipoSel = null; ultimaSalva = id; save(); render(); window.scrollTo(0, 0);
+    delete db.rascunhos[rascKey(t)]; limparEscolha(); ultimaSalva = id; save(); render(); window.scrollTo(0, 0);
   }
   if(acao === 'concluir-corrida'){
     const rd = db.rascunhos.corrida;
     if(!num(rd.km)){ toast('Informe a distância'); return; }
     const id = Date.now();
     db.sessoes.push({ id, data: new Date().toISOString(), tipo: 'corrida', corrida: { ...rd } });
-    delete db.rascunhos.corrida; tipoSel = null; ultimaSalva = id; save(); render(); window.scrollTo(0, 0);
+    delete db.rascunhos.corrida; limparEscolha(); ultimaSalva = id; save(); render(); window.scrollTo(0, 0);
   }
   if(acao === 'fechar-banner'){ ultimaSalva = null; render(); }
   if(acao === 'editar'){ abrirEditor(plano()); render(); window.scrollTo(0, 0); }
