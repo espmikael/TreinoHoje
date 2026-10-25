@@ -1,6 +1,6 @@
 /* TreinoHoje — service worker: faz o app abrir sem internet.
    Ao mudar arquivos do app, aumente o número da versão abaixo. */
-const CACHE = 'treinohoje-v13';
+const CACHE = 'treinohoje-v14';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './icon.svg', './estilo.css', './app.js', './exercicios.js'];
 
 self.addEventListener('install', e => {

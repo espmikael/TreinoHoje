@@ -758,6 +758,29 @@ function blocoVolume(){
     </section>`;
 }
 
+/* ---------- backup: no celular abre o menu de compartilhar (Drive, e-mail…), no PC baixa o arquivo ---------- */
+async function exportarBackup(){
+  const nome = `treinohoje-backup-${diaISO()}.json`;
+  const conteudo = JSON.stringify({ sessoes: db.sessoes, planos: db.planos, planoAtivo: db.planoAtivo, metas: db.metas }, null, 2);
+  const marcar = msg => { db.ultimoBackup = new Date().toISOString(); db.backupAdiadoAte = null; save(); render(); toast(msg); };
+  let arquivo = null;
+  try{ arquivo = new File([conteudo], nome, { type: 'application/json' }); }catch(e){}
+  if(arquivo && matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [arquivo] })){
+    try{
+      await navigator.share({ files: [arquivo], title: 'Backup TreinoHoje' });
+      marcar('Backup enviado');
+      return;
+    }catch(e){
+      if(e && e.name === 'AbortError') return;      // cancelou no menu: não conta como backup
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([conteudo], { type: 'application/json' }));
+  a.download = nome; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  marcar('Backup salvo');
+}
+
 /* ---------- editar um registro do histórico ---------- */
 let edReg = null;
 function abrirEdicao(s){
@@ -875,7 +898,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v13 · out/2026';
+const VERSAO = 'v14 · out/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -898,7 +921,7 @@ function telaPlano(){
         <div class="card txt">
           <div class="backup-st"><span>Armazenamento protegido</span><span class="${db.persistido || ehApp() ? 'st-ok' : ''}">${db.persistido ? '✓ ativo' : (ehApp() ? '✓ app instalado' : 'não confirmado')}</span></div>
           <div class="backup-st"><span>Último backup</span><span class="${db.ultimoBackup && diasDesde(db.ultimoBackup) < 30 ? 'st-ok' : 'st-alerta'}">${backup}</span></div>
-          <p class="cs">Registros, planos e metas ficam neste navegador. Exporte de vez em quando para não perder ao trocar de aparelho.</p>
+          <p class="cs">Registros, planos e metas ficam neste navegador. No celular, Exportar abre o menu de compartilhar: escolha o Google Drive e o arquivo vai direto para lá.</p>
           <div class="acoes" style="align-items:center;gap:16px">
             <button type="button" class="mini-btn" data-acao="exportar">Exportar backup</button>
             <button type="button" class="lnk" data-acao="importar">Importar</button>
@@ -1469,14 +1492,7 @@ $('#app').addEventListener('click', e => {
     me.form = { aberto: false, exId: '', kg: '', prazo: '', erro: false }; render();
   }
   if(acao === 'salvar-metas' && me){ salvarMetas(); }
-  if(acao === 'exportar'){
-    const blob = new Blob([JSON.stringify({ sessoes: db.sessoes, planos: db.planos, planoAtivo: db.planoAtivo, metas: db.metas }, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `treinohoje-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click(); URL.revokeObjectURL(a.href);
-    db.ultimoBackup = new Date().toISOString(); db.backupAdiadoAte = null; save(); render(); toast('Backup salvo');
-  }
+  if(acao === 'exportar'){ exportarBackup(); return; }
   if(acao === 'importar') $('#arq').click();
   if(acao === 'instalar' && pedidoInstalar){ pedidoInstalar.prompt(); pedidoInstalar.userChoice.finally(() => { pedidoInstalar = null; render(); }); }
 });
