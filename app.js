@@ -122,12 +122,12 @@ function melhorSerie(sets){
 }
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2000); }
 
-function calendario(){
-  const d = new Date();
+function calendario(d = new Date()){
+  const ehHoje = diaISO(d) === diaISO();
   const mes = d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
   const sem = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
   const longa = d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-  return `<div class="cal" role="img" aria-label="Hoje, ${longa}"><div class="m">${mes}</div><div class="d">${d.getDate()}</div><div class="w">${sem}</div></div>`;
+  return `<div class="cal${ehHoje ? '' : ' retro'}" role="img" aria-label="${ehHoje ? 'Hoje' : 'Registrando em'}, ${longa}"><div class="m">${mes}</div><div class="d">${d.getDate()}</div><div class="w">${sem}</div></div>`;
 }
 const cab = (rot, h1, foco = '', direita = '') => `<div class="cab"><div><p class="rot">${rot}</p><h1>${h1}</h1>${foco ? `<p class="foco">${foco}</p>` : ''}</div>${direita}</div>`;
 
@@ -288,7 +288,17 @@ let fichaAberta = null;
    HOJE
    ========================================================= */
 function diaISO(d = new Date()){ return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
-function escolherTipo(k){ tipoSel = k; db.hoje = { dia: diaISO(), tipo: k }; save(); }
+function escolherTipo(k, retro){
+  if(retro === undefined) retro = (db.hoje && db.hoje.dia === diaISO()) ? db.hoje.retro || null : null;
+  tipoSel = k; db.hoje = { dia: diaISO(), tipo: k, retro: retro && retro !== diaISO() ? retro : null }; save();
+}
+/* data em que o treino em andamento será registrado (null = agora) */
+function dataRetro(){ return (db.hoje && db.hoje.dia === diaISO() && db.hoje.retro) || null; }
+const dataDeISO = iso => { const [a, m, d] = iso.split('-').map(Number); return new Date(a, m - 1, d, 12, 0, 0); };
+const fmtDia = iso => dataDeISO(iso).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '');
+function ordenarSessoes(){ db.sessoes.sort((a, b) => new Date(a.data) - new Date(b.data)); }
+let retroAberto = false, retroData = '';
+function limiteRetro(){ const d = new Date(); d.setDate(d.getDate() - 60); return diaISO(d); }
 function limparEscolha(){ tipoSel = null; db.hoje = null; }
 /* a escolha do treino vale só para o dia em que foi feita */
 function tipoAtual(){
@@ -323,7 +333,8 @@ function bannerSalvo(){
   const s = ultimaSalva && db.sessoes.find(x => x.id === ultimaSalva);
   if(!s) return '';
   const pode = db.desfazer && db.desfazer.id === s.id && Date.now() - db.desfazer.em < 5 * 60e3;
-  return `<div class="banner" role="status"><p>${esc(tituloSessao(s).nome)} salvo</p>
+  const diaS = diaISO(new Date(s.data));
+  return `<div class="banner" role="status"><p>${esc(tituloSessao(s).nome)} salvo${diaS !== diaISO() ? ' · ' + fmtDia(diaS) : ''}</p>
     ${pode ? `<button type="button" class="lnk" data-acao="desfazer">Desfazer</button>` : ''}
     <button type="button" class="mini-btn" data-share="${s.id}" aria-label="Compartilhar">${IC.share}<span class="so-largo">Compartilhar</span></button>
     <button type="button" class="x-btn" data-acao="fechar-banner" aria-label="Fechar">${IC.x}</button></div>`;
@@ -393,8 +404,15 @@ function telaHoje(){
         <span class="e-txt"><span class="e-nome">${k === 'corrida' ? 'Corrida' : 'Treino ' + k}</span><span class="e-foco">${esc(foco)}</span></span>
         <span class="e-quando">${quandoFoi(k)}</span></button>`;
     }).join('');
-    return topo + cab('Hoje', 'Qual treino?', '', calendario()) +
-      `<div class="sec"><span>Escolha o de hoje</span><span>${esc(plano().nome)}</span></div><div class="escolhas">${opcoes}</div>` + folhaInstalar();
+    const outroDia = retroAberto && retroData && retroData !== diaISO();
+    const retroBox = retroAberto
+      ? `<div class="retro-box"><label class="lb" for="retro-data">Data do treino</label>
+          <input class="inp" type="date" id="retro-data" data-retro="1" value="${esc(retroData)}" min="${limiteRetro()}" max="${diaISO()}">
+          <p class="cs" style="margin-top:6px">${outroDia ? `Escolha o treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p>
+          <div class="acoes"><button type="button" class="lnk" data-acao="retro-fechar">Voltar para hoje</button></div></div>`
+      : `<div class="acoes" style="margin-top:12px"><button type="button" class="lnk" data-acao="retro-abrir">Esqueceu de registrar? Lançar treino de outro dia</button></div>`;
+    return topo + cab(outroDia ? 'Outro dia' : 'Hoje', 'Qual treino?', '', calendario(outroDia ? dataDeISO(retroData) : new Date())) +
+      `<div class="sec"><span>${outroDia ? 'Escolha o do dia ' + fmtDia(retroData) : 'Escolha o de hoje'}</span><span>${esc(plano().nome)}</span></div><div class="escolhas">${opcoes}</div>` + retroBox + folhaInstalar();
   }
   const seg = keys.map(k =>
     `<button type="button" role="tab" aria-selected="${k === t}" data-tipo="${k}" class="${k === t ? 'on' : ''}">${k === 'corrida' ? 'Corrida' : k}</button>`
@@ -483,7 +501,8 @@ function telaTreino(t){
       <div class="sets">${linhas}</div></section>`;
   }).join('');
   recemFechado = null; recemMarcado = null;
-  return cab('Treino de hoje', 'Treino ' + t, esc(p.foco), calendario()) +
+  const rt = dataRetro();
+  return cab(rt ? `Lançando em ${fmtDia(rt)} · <button type="button" class="lnk lnk-mini" data-acao="retro-hoje">usar hoje</button>` : 'Treino de hoje', 'Treino ' + t, esc(p.foco), calendario(rt ? dataDeISO(rt) : new Date())) +
     `<div class="sec"><span>Exercícios</span><span>${lista.length} · ${totalSeries} séries · 1–2 da falha</span></div>
     <p class="dica">Toque no ✓ para repetir a última série. Digite só quando mudar.</p>
     <div class="lista-ex">${cards}</div>
@@ -520,7 +539,8 @@ function telaCorrida(){
   const rd = db.rascunhos.corrida || (db.rascunhos.corrida = { km: '', min: '', sens: '' });
   const p = pace(num(rd.km), num(rd.min));
   const sens = ['Leve', 'Moderada', 'Puxada'].map(s => `<button type="button" class="chip ${rd.sens === s ? 'on' : ''}" aria-pressed="${rd.sens === s}" data-sens="${s}">${s}</button>`).join('');
-  return cab('Cardio', 'Corrida', 'Ritmo confortável', calendario()) +
+  const rt = dataRetro();
+  return cab(rt ? `Lançando em ${fmtDia(rt)} · <button type="button" class="lnk lnk-mini" data-acao="retro-hoje">usar hoje</button>` : 'Cardio', 'Corrida', 'Ritmo confortável', calendario(rt ? dataDeISO(rt) : new Date())) +
     `<div class="sec"><span>Registro</span></div>
     <section class="card">
       <div class="grid2">
@@ -738,6 +758,54 @@ function blocoVolume(){
     </section>`;
 }
 
+/* ---------- editar um registro do histórico ---------- */
+let edReg = null;
+function abrirEdicao(s){
+  edReg = { id: s.id, dia: diaISO(new Date(s.data)) };
+  if(s.tipo === 'corrida') edReg.corrida = { km: s.corrida?.km || '', min: s.corrida?.min || '', sens: s.corrida?.sens || '' };
+  else edReg.ex = clone(s.ex || {});
+}
+function formRegistro(s){
+  const campoData = `<label class="lb" for="er-dia">Data</label><input class="inp" type="date" id="er-dia" data-er="dia" value="${esc(edReg.dia)}" max="${diaISO()}">`;
+  let campos;
+  if(s.tipo === 'corrida'){
+    const c = edReg.corrida;
+    campos = `<div class="grid2" style="margin-top:12px">
+        <div><label class="lb" for="er-km">Distância</label><span class="field"><input id="er-km" inputmode="decimal" data-er="km" value="${esc(c.km)}"><small>km</small></span></div>
+        <div><label class="lb" for="er-min">Tempo</label><span class="field"><input id="er-min" inputmode="decimal" data-er="min" value="${esc(c.min)}"><small>min</small></span></div></div>
+      <p class="lb" style="margin-top:12px">Esforço</p><div class="chips">${['Leve', 'Moderada', 'Puxada'].map(x => `<button type="button" class="chip ${c.sens === x ? 'on' : ''}" aria-pressed="${c.sens === x}" data-ersens="${x}">${x}</button>`).join('')}</div>`;
+  } else {
+    campos = Object.entries(edReg.ex).map(([id, sets]) => `<div class="er-ex"><p class="m-nome">${esc(nomeEx(id))}</p>
+      ${sets.map((z, i) => `<div class="er-linha"><span class="n">${pad2(i + 1)}</span>
+        <label class="field"><input inputmode="decimal" aria-label="${esc(nomeEx(id))}, série ${i + 1}, carga" data-er="kg" data-ex="${id}" data-i="${i}" value="${esc(String(z.kg ?? '').replace('.', ','))}"><small>kg</small></label>
+        <label class="field"><input inputmode="numeric" aria-label="${esc(nomeEx(id))}, série ${i + 1}, repetições" data-er="reps" data-ex="${id}" data-i="${i}" value="${esc(z.reps)}"><small>reps</small></label></div>`).join('')}
+      <button type="button" class="lnk lnk-mini" data-erserie="${id}">+ série</button></div>`).join('');
+    campos += `<p class="cs" style="margin-top:8px">Para tirar uma série, apague as repetições dela.</p>`;
+  }
+  return campoData + campos + `<div class="acoes" style="align-items:center;gap:16px;margin-top:14px">
+    <button type="button" class="mini-btn" data-acao="er-salvar">Salvar</button><button type="button" class="lnk" data-acao="er-cancelar">Cancelar</button></div>`;
+}
+function salvarRegistro(){
+  const s = db.sessoes.find(x => x.id === edReg.id); if(!s) { edReg = null; render(); return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(edReg.dia) || edReg.dia > diaISO()){ toast('Data inválida'); return; }
+  const antiga = new Date(s.data), nova = dataDeISO(edReg.dia);
+  nova.setHours(antiga.getHours(), antiga.getMinutes(), 0, 0);
+  if(s.tipo === 'corrida'){
+    if(!num(edReg.corrida.km)){ toast('Informe a distância'); return; }
+    s.corrida = { ...edReg.corrida };
+  } else {
+    const ex = {};
+    for(const [id, sets] of Object.entries(edReg.ex)){
+      const ok = sets.filter(z => String(z.reps).trim() !== '').map(z => ({ kg: String(z.kg ?? '').trim(), reps: String(z.reps).trim() }));
+      if(ok.length) ex[id] = ok;
+    }
+    if(!Object.keys(ex).length){ toast('Sem séries. Para apagar o treino, use Excluir'); return; }
+    s.ex = ex;
+  }
+  s.data = nova.toISOString();
+  ordenarSessoes(); edReg = null; save(); render(); toast('Registro atualizado');
+}
+
 function telaHistorico(){
   const topo = cab(`${db.sessoes.length} registros`, 'Histórico');
   if(!db.sessoes.length) return topo + `<p class="vazio">Nenhum treino registrado ainda.</p>`;
@@ -781,8 +849,10 @@ function telaHistorico(){
       corpo = Object.entries(s.ex || {}).map(([id, sets]) =>
         `<p>${esc(nomeEx(id))}<br><span>${sets.map(x => (x.kg ? esc(x.kg) + ' kg × ' : '') + esc(x.reps)).join(' · ')}</span></p>`).join('');
     }
+    if(edReg && edReg.id === s.id) return `<details class="card" open><summary><span class="h-tit">${tit}</span><span class="h-data">${data}</span></summary><div class="h-body">${formRegistro(s)}</div></details>`;
     return `<details class="card"><summary><span class="h-tit">${tit}</span><span class="h-data">${data}</span></summary>
       <div class="h-body">${corpo}<div class="h-acoes">
+        <button type="button" class="lnk" data-edreg="${s.id}">Editar</button>
         <button type="button" class="lnk" data-share="${s.id}">${IC.share}Compartilhar</button>
         <button type="button" class="del" data-del="${s.id}">Excluir</button></div></div></details>`;
   }).join('');
@@ -805,7 +875,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v12 · out/2026';
+const VERSAO = 'v13 · out/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1176,12 +1246,12 @@ document.querySelector('.tema').addEventListener('click', e => {
 document.querySelector('nav.menu').addEventListener('click', e => {
   const b = e.target.closest('button[data-aba]'); if(!b) return;
   if((aba === 'editor') && !confirm('Sair do editor sem salvar?')) return;
-  aba = b.dataset.aba; ed = null; me = null; trocando = null; fichaAberta = null; render(); window.scrollTo(0, 0);
+  aba = b.dataset.aba; ed = null; me = null; trocando = null; fichaAberta = null; edReg = null; render(); window.scrollTo(0, 0);
 });
 
 $('#app').addEventListener('input', e => {
   const el = e.target;
-  if(el.dataset.ex){
+  if(el.dataset.ex && !el.dataset.er){
     const t = tipoAtual();
     const rd = rascunho(t);
     const e = exerciciosDoDia(t).find(x => x.id === el.dataset.ex);
@@ -1199,6 +1269,16 @@ $('#app').addEventListener('input', e => {
     db.rascunhos.corrida[el.dataset.run] = el.value.trim(); save();
     const p = pace(num(db.rascunhos.corrida.km), num(db.rascunhos.corrida.min));
     $('#pace').innerHTML = `Pace <b>${p ? p + ' /km' : '—'}</b>`;
+  } else if(el.dataset.er && edReg){
+    const f = el.dataset.er;
+    if(f === 'dia') edReg.dia = el.value;
+    else if(f === 'km' || f === 'min') edReg.corrida[f] = el.value.trim();
+    else edReg.ex[el.dataset.ex][+el.dataset.i][f] = el.value.trim();
+  } else if(el.dataset.retro){
+    retroData = el.value;
+    if(retroData > diaISO()) retroData = diaISO();
+    const p = el.parentElement.querySelector('.cs');
+    if(p) p.innerHTML = retroData && retroData !== diaISO() ? `Escolha o treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.';
   } else if(el.dataset.mf && me){
     me.form[el.dataset.mf] = el.value;
   } else if(el.dataset.pe && ed){
@@ -1216,6 +1296,7 @@ $('#app').addEventListener('change', e => {
   const el = e.target;
   if(el.id === 'plano-ativo'){ db.planoAtivo = el.value; limparEscolha(); save(); render(); toast('Plano ativado'); return; }
   if(el.id === 'dash-ex'){ dashEx = el.value; render(); return; }
+  if(el.dataset.retro){ retroData = el.value > diaISO() ? diaISO() : el.value; render(); return; }
   if(el.dataset.mf && me){ me.form[el.dataset.mf] = el.value; return; }
   if(el.dataset.addEx != null && ed){
     const ti = +el.dataset.addEx; const v = el.value;
@@ -1253,7 +1334,7 @@ $('#app').addEventListener('click', e => {
   const el = e.target.closest('button'); if(!el || el.disabled) return;
   if(el.dataset.ficha){ fichaAberta = el.dataset.ficha; render(); return; }
   if(el.dataset.acao === 'fechar-ficha'){ fichaAberta = null; render(); return; }
-  if(el.dataset.tipo){ escolherTipo(el.dataset.tipo); render(); window.scrollTo(0, 0); return; }
+  if(el.dataset.tipo){ escolherTipo(el.dataset.tipo, el.classList.contains('escolha') ? (retroAberto && retroData ? retroData : null) : undefined); render(); window.scrollTo(0, 0); return; }
   if(el.dataset.sens){ db.rascunhos.corrida.sens = db.rascunhos.corrida.sens === el.dataset.sens ? '' : el.dataset.sens; save(); render(); return; }
   if(el.dataset.visao){ visao = el.dataset.visao; mesOffset = 0; render(); return; }
   if(el.dataset.mes){ mesOffset = Math.min(0, mesOffset + +el.dataset.mes); render(); return; }
@@ -1296,6 +1377,9 @@ $('#app').addEventListener('click', e => {
   }
   if(el.dataset.rmCarga != null && me){ me.cargas.splice(+el.dataset.rmCarga, 1); render(); return; }
   if(el.dataset.gen){ gen[el.dataset.gen] = isNaN(+el.dataset.v) ? el.dataset.v : +el.dataset.v; render(); return; }
+  if(el.dataset.edreg){ const s = db.sessoes.find(x => String(x.id) === el.dataset.edreg); if(s){ abrirEdicao(s); render(); } return; }
+  if(el.dataset.ersens && edReg){ edReg.corrida.sens = edReg.corrida.sens === el.dataset.ersens ? '' : el.dataset.ersens; render(); return; }
+  if(el.dataset.erserie && edReg){ const l = edReg.ex[el.dataset.erserie]; const u = l[l.length - 1] || { kg: '', reps: '' }; l.push({ kg: u.kg, reps: '' }); render(); return; }
   if(el.dataset.del){
     if(confirm('Excluir este registro?')){ db.sessoes = db.sessoes.filter(s => String(s.id) !== el.dataset.del); if(String(ultimaSalva) === el.dataset.del) ultimaSalva = null; save(); render(); }
     return;
@@ -1334,27 +1418,36 @@ $('#app').addEventListener('click', e => {
       if(feitos.length) ex[e.id] = feitos;
     }
     if(!Object.keys(ex).length){ toast('Preencha ao menos uma série'); return; }
-    const id = Date.now();
-    db.sessoes.push({ id, data: new Date().toISOString(), tipo: t, planoId: db.planoAtivo, nome: 'Treino ' + t, foco: plano().treinos[t].foco, ex });
-    db.desfazer = { id, rk: rascKey(t), rascunho: clone(rd), tipo: t, em: Date.now() };
+    const id = Date.now(); const rt = dataRetro();
+    db.sessoes.push({ id, data: (rt ? dataDeISO(rt) : new Date()).toISOString(), tipo: t, planoId: db.planoAtivo, nome: 'Treino ' + t, foco: plano().treinos[t].foco, ex });
+    ordenarSessoes();
+    db.desfazer = { id, rk: rascKey(t), rascunho: clone(rd), tipo: t, retro: rt, em: Date.now() };
+    retroAberto = false; retroData = '';
     delete db.rascunhos[rascKey(t)]; limparEscolha(); abertos.clear(); trocando = null; ultimaSalva = id;
     vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0);
   }
   if(acao === 'concluir-corrida'){
     const rd = db.rascunhos.corrida;
     if(!num(rd.km)){ toast('Informe a distância'); return; }
-    const id = Date.now();
-    db.sessoes.push({ id, data: new Date().toISOString(), tipo: 'corrida', corrida: { ...rd } });
-    db.desfazer = { id, rk: 'corrida', rascunho: clone(rd), tipo: 'corrida', em: Date.now() };
+    const id = Date.now(); const rt = dataRetro();
+    db.sessoes.push({ id, data: (rt ? dataDeISO(rt) : new Date()).toISOString(), tipo: 'corrida', corrida: { ...rd } });
+    ordenarSessoes();
+    db.desfazer = { id, rk: 'corrida', rascunho: clone(rd), tipo: 'corrida', retro: rt, em: Date.now() };
+    retroAberto = false; retroData = '';
     delete db.rascunhos.corrida; limparEscolha(); ultimaSalva = id;
     vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0);
   }
   if(acao === 'desfazer' && db.desfazer){
     const d = db.desfazer;
     db.sessoes = db.sessoes.filter(s => s.id !== d.id);
-    db.rascunhos[d.rk] = d.rascunho; escolherTipo(d.tipo);
+    db.rascunhos[d.rk] = d.rascunho; escolherTipo(d.tipo, d.retro || null);
     db.desfazer = null; ultimaSalva = null; save(); render(); window.scrollTo(0, 0); toast('Registro desfeito');
   }
+  if(acao === 'er-salvar' && edReg){ salvarRegistro(); return; }
+  if(acao === 'er-cancelar'){ edReg = null; render(); return; }
+  if(acao === 'retro-abrir'){ retroAberto = true; const o = new Date(); o.setDate(o.getDate() - 1); retroData = diaISO(o); render(); setTimeout(() => $('#retro-data')?.focus(), 0); return; }
+  if(acao === 'retro-fechar'){ retroAberto = false; retroData = ''; render(); return; }
+  if(acao === 'retro-hoje'){ escolherTipo(tipoAtual(), null); retroAberto = false; retroData = ''; render(); return; }
   if(acao === 'adiar-backup'){ const x = new Date(); x.setDate(x.getDate() + 7); db.backupAdiadoAte = x.toISOString(); save(); render(); }
   if(acao === 'fechar-instalar'){ db.vistoInstalar = true; instalarAberto = false; save(); render(); }
   if(acao === 'como-instalar'){ instalarAberto = true; render(); }

@@ -406,3 +406,15 @@ body{font-variant-numeric:tabular-nums}
 .outro-box{margin-top:10px;padding:12px;border-radius:8px;border:1px solid var(--brand);background:var(--bg)}
 .cab .toggle{flex:none}
 @media (min-width:900px){ .plano-grid.ajustes{grid-template-columns:repeat(3,1fr)} }
+
+/* ---------- rodada 6: editar registro e lançar em outro dia ---------- */
+.retro-box{margin-top:14px;padding:14px;border-radius:10px;border:1px solid var(--rule);background:var(--surface)}
+.lnk-mini{min-height:32px;font-size:13px}
+.rot .lnk-mini{font-family:Inter,sans-serif;letter-spacing:0;text-transform:none;color:var(--ink);vertical-align:baseline}
+.cal.retro{border-color:var(--action)}
+.cal.retro .m{background:var(--action);color:var(--action-ink)}
+.er-ex{margin-top:14px}
+.er-ex .m-nome{margin-bottom:6px}
+.er-linha{display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center;margin-bottom:6px}
+.er-linha .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+.h-acoes{flex-wrap:wrap}
