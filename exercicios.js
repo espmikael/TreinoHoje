@@ -5,7 +5,7 @@
    g = grupo · k = c (composto) / i (isolado) · eq = b (academia básica serve) / m (precisa de máquina)
    r = faixa de repetições sugerida */
 const GRUPOS = { peito: 'Peito', costas: 'Costas', ombro: 'Ombros', biceps: 'Bíceps', triceps: 'Tríceps',
-  pernas: 'Quadríceps', posterior: 'Posterior de coxa', gluteos: 'Glúteos', panturrilha: 'Panturrilha', adutores: 'Adutores', core: 'Core' };
+  pernas: 'Quadríceps', posterior: 'Posterior de coxa', gluteos: 'Glúteos', panturrilha: 'Panturrilha', adutores: 'Adutores', core: 'Core', cardio: 'Cardio' };
 const BIB = [
   ['supino-reto', 'Supino reto (barra)', 'peito', 'c', 'b', 8, 12],
   ['supino-reto-halteres', 'Supino reto (halteres)', 'peito', 'c', 'b', 8, 12],
@@ -112,8 +112,16 @@ const BIB = [
   ['crucifixo-inclinado', 'Crucifixo inclinado (halteres)', 'peito', 'i', 'b', 10, 15],
   ['encolhimento-barra', 'Encolhimento com barra', 'costas', 'i', 'b', 10, 15],
   ['panturrilha-unilateral', 'Panturrilha unilateral (halter)', 'panturrilha', 'i', 'b', 10, 15],
+  /* cardio: registrado por tempo (min) e distância opcional (km), sem carga */
+  ['bike', 'Bike ergométrica', 'cardio', 'i', 'm', 10, 20],
+  ['esteira', 'Esteira (caminhada ou corrida)', 'cardio', 'i', 'm', 10, 20],
+  ['eliptico', 'Elíptico (transport)', 'cardio', 'i', 'm', 10, 20],
+  ['escada', 'Escada (simulador)', 'cardio', 'i', 'm', 10, 15],
+  ['remo-ergometro', 'Remo ergômetro', 'cardio', 'i', 'm', 8, 15],
+  ['pular-corda', 'Pular corda', 'cardio', 'i', 'b', 5, 10],
 ].map(([id, nome, g, k, eq, a, b]) => ({ id, nome, g, k, eq, r: [a, b] }));
 const BIB_ID = Object.fromEntries(BIB.map(e => [e.id, e]));
+const ehCardio = id => BIB_ID[id]?.g === 'cardio';
 
 /* =========================================================
    FICHAS — ilustrações próprias (traço simples), músculos e execução
