@@ -424,17 +424,45 @@ function telaHoje(){
 function rascKey(t){ return db.planoAtivo + ':' + t; }
 function rascunho(t){
   const rk = rascKey(t);
-  const rd = db.rascunhos[rk] || (db.rascunhos[rk] = { ex: {}, trocas: {} });
+  let rd = db.rascunhos[rk];
+  /* rascunho esquecido (mais de 16 h) não vaza para o próximo treino: trocas e séries extras valem só no dia */
+  if(rd && rd.criado && Date.now() - rd.criado > 16 * 3600e3) rd = null;
+  if(!rd) rd = db.rascunhos[rk] = { ex: {}, trocas: {}, extras: {}, criado: Date.now() };
   if(!rd.trocas) rd.trocas = {};
+  if(!rd.extras) rd.extras = {};
+  if(!rd.criado) rd.criado = Date.now();
   return rd;
 }
-/* exercícios do treino já com as trocas do dia aplicadas */
+/* exercícios do treino com as trocas e séries extras do dia aplicadas (o plano não muda) */
 function exerciciosDoDia(t){
   const rd = rascunho(t);
   return plano().treinos[t].ex.map(e => {
+    const extra = rd.extras[e.id] || 0;
+    const base = { ...e, orig: e.id, base: e.series, series: e.series + extra, extra };
     const alt = rd.trocas[e.id] && BIB_ID[rd.trocas[e.id]];
-    return alt ? { ...e, id: alt.id, nome: alt.nome, obs: '', orig: e.id, trocado: true } : { ...e, orig: e.id, trocado: false };
+    return alt ? { ...base, id: alt.id, nome: alt.nome, obs: '', trocado: true } : { ...base, trocado: false };
   });
+}
+/* ---------- busca por nome (troca e editor) ---------- */
+const normTxt = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+let buscaTxt = '';
+const ICON_LUPA = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
+function buscarBib(q, excluir = []){
+  const termos = normTxt(q).split(/\s+/).filter(Boolean);
+  if(!termos.length) return [];
+  return BIB.filter(b => !excluir.includes(b.id) && termos.every(t => normTxt(b.nome + ' ' + (GRUPOS[b.g] || '')).includes(t))).slice(0, 10);
+}
+function resultadosTroca(e, lista, q){
+  const voltar = e.trocado ? `<button type="button" class="chip" data-alt="" data-orig="${e.orig}">Voltar: ${esc(nomeEx(e.orig))}</button>` : '';
+  const excluir = lista.map(x => x.id).concat(e.orig);
+  const itens = q.trim() ? buscarBib(q, excluir) : alternativas(e, lista);
+  const vazio = q.trim() ? '<span class="cs">Nada encontrado com esse nome.</span>' : (e.trocado ? '' : '<span class="cs">Busque pelo nome acima.</span>');
+  return voltar + (itens.map(a => `<button type="button" class="chip" data-alt="${a.id}" data-orig="${e.orig}">${esc(a.nome)}</button>`).join('') || vazio);
+}
+function resultadosEditor(ti, q){
+  if(!q.trim()) return '';
+  const itens = buscarBib(q, ed.treinos[ti].ex.map(x => x.id));
+  return itens.map(b => `<button type="button" class="chip" data-addbusca="${b.id}" data-ti="${ti}">+ ${esc(b.nome)}</button>`).join('') || '<span class="cs">Nada encontrado. Use “+ Outro” na lista abaixo para criar.</span>';
 }
 function setsDe(rd, e){
   let sets = rd.ex[e.id];
@@ -448,7 +476,7 @@ const completo = sets => sets.length && sets.every(s => s.reps !== '');
 function alternativas(e, lista){
   const g = (BIB_ID[e.orig] || BIB_ID[e.id] || {}).g;
   if(!g) return [];
-  return BIB.filter(b => b.g === g && b.id !== e.id && b.id !== e.orig && !lista.some(x => x.id === b.id)).slice(0, 5);
+  return BIB.filter(b => b.g === g && b.id !== e.id && b.id !== e.orig && !lista.some(x => x.id === b.id)).slice(0, 6);
 }
 
 function telaTreino(t){
@@ -478,10 +506,9 @@ function telaTreino(t){
         hint = `<p class="hint">${IC.up}Topo da faixa: suba a carga</p>`;
     }
     const alts = alternativas(e, lista);
-    const painel = trocando === e.orig ? `<div class="troca"><p class="troca-t">Aparelho ocupado? Troque só hoje</p><div class="chips">
-        ${e.trocado ? `<button type="button" class="chip" data-alt="" data-orig="${e.orig}">Voltar: ${esc(nomeEx(e.orig))}</button>` : ''}
-        ${alts.map(a => `<button type="button" class="chip" data-alt="${a.id}" data-orig="${e.orig}">${esc(a.nome)}</button>`).join('') || (e.trocado ? '' : '<span class="cs">Sem alternativas na biblioteca.</span>')}
-      </div></div>` : '';
+    const painel = trocando === e.orig ? `<div class="troca"><p class="troca-t">Aparelho ocupado? Troque só hoje</p>
+        <label class="busca">${ICON_LUPA}<input type="search" placeholder="Buscar pelo nome" data-busca="troca" data-orig="${e.orig}" value="${esc(buscaTxt)}" aria-label="Buscar exercício pelo nome" autocomplete="off"></label>
+        <div class="chips" id="troca-res">${resultadosTroca(e, lista, buscaTxt)}</div></div>` : '';
     const linhas = sets.map((s, i) => {
       const ls = last && last.sets[i];
       const rot = `${esc(e.nome)}, série ${i + 1}`;
@@ -494,11 +521,13 @@ function telaTreino(t){
       </div>`;
     }).join('');
     return `<section class="card">
-      <div class="ex-head"><div class="nome-i"><h2>${esc(e.nome)}</h2>${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}"><span>i</span></button>` : ''}</div><span class="ex-meta">${feitas}/${e.series} · ${e.series} × ${e.reps[0]}–${e.reps[1]}</span></div>
+      <div class="ex-head"><div class="nome-i"><h2>${esc(e.nome)}</h2>${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}"><span>i</span></button>` : ''}</div><span class="ex-meta">${feitas}/${e.series} · ${e.base}${e.extra ? '+' + e.extra : ''} × ${e.reps[0]}–${e.reps[1]}</span></div>
       <div class="ex-sub"><p class="ultima">${ult}${e.obs ? ' · ' + esc(e.obs) : ''}</p>
         <button type="button" class="trocar" data-trocar="${e.orig}" aria-expanded="${trocando === e.orig}">${trocando === e.orig ? 'Fechar' : (e.trocado ? 'Trocado' : 'Trocar')}</button></div>
+      ${e.trocado ? `<p class="troca-info">Trocado só hoje · no plano: ${esc(nomeEx(e.orig))} · <button type="button" class="lnk lnk-mini" data-fixar="${e.orig}">Salvar no plano</button></p>` : ''}
       ${hint}${painel}
-      <div class="sets">${linhas}</div></section>`;
+      <div class="sets">${linhas}</div>
+      <div class="ex-acoes">${e.extra ? `<button type="button" class="serie-btn" data-menos="${e.orig}" aria-label="Remover série extra de ${esc(e.nome)}">−</button>` : ''}<button type="button" class="serie-btn" data-mais="${e.orig}" aria-label="Adicionar uma série hoje em ${esc(e.nome)}">+</button></div></section>`;
   }).join('');
   recemFechado = null; recemMarcado = null;
   const rt = dataRetro();
@@ -898,7 +927,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v14 · out/2026';
+const VERSAO = 'v16 · out/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1001,6 +1030,8 @@ function telaEditor(){
         <label class="lb" for="foco-${ti}">Foco</label>
         <input class="inp" id="foco-${ti}" data-pe="foco" data-ti="${ti}" value="${esc(t.foco)}" placeholder="Ex.: Peito, ombro e tríceps">
         <div style="margin-top:14px">${linhas || '<p class="chart-vazio" style="padding:4px 0 0">Nenhum exercício ainda.</p>'}</div>
+        <label class="busca" style="margin-top:12px">${ICON_LUPA}<input type="search" placeholder="Buscar exercício para adicionar" data-busca="ed" data-ti="${ti}" aria-label="Buscar exercício para adicionar ao treino ${LETRAS[ti]}" autocomplete="off"></label>
+        <div class="chips" id="ed-res-${ti}" style="margin-top:8px"></div>
         <select class="inp ed-add" data-add-ex="${ti}" aria-label="Adicionar exercício ao treino ${LETRAS[ti]}">${ops}</select>
         ${ed.outro === ti ? `<div class="outro-box"><label class="lb" for="outro-nome">Nome do exercício</label>
           <input class="inp" id="outro-nome" data-pe="outroNome" value="${esc(ed.outroNome || '')}" placeholder="Ex.: Supino na máquina articulada">
@@ -1292,6 +1323,12 @@ $('#app').addEventListener('input', e => {
     db.rascunhos.corrida[el.dataset.run] = el.value.trim(); save();
     const p = pace(num(db.rascunhos.corrida.km), num(db.rascunhos.corrida.min));
     $('#pace').innerHTML = `Pace <b>${p ? p + ' /km' : '—'}</b>`;
+  } else if(el.dataset.busca === 'troca'){
+    buscaTxt = el.value;
+    const lista = exerciciosDoDia(tipoAtual()); const e = lista.find(x => x.orig === el.dataset.orig);
+    const box = $('#troca-res'); if(box && e) box.innerHTML = resultadosTroca(e, lista, buscaTxt);
+  } else if(el.dataset.busca === 'ed' && ed){
+    const box = $('#ed-res-' + el.dataset.ti); if(box) box.innerHTML = resultadosEditor(+el.dataset.ti, el.value);
   } else if(el.dataset.er && edReg){
     const f = el.dataset.er;
     if(f === 'dia') edReg.dia = el.value;
@@ -1369,7 +1406,7 @@ $('#app').addEventListener('click', e => {
     const sets = setsDe(rd, e); const i = +el.dataset.i; const s = sets[i];
     if(s.reps !== ''){ sets[i] = { kg: '', reps: '' }; }
     else {
-      const ls = ultimo(e.id)?.sets[i];
+      const ls = ultimo(e.id)?.sets[i] || (i > 0 && sets[i - 1].reps !== '' ? sets[i - 1] : null);
       const kg = s.kg || (ls ? String(ls.kg || '').replace('.', ',') : '');
       const reps = ls ? ls.reps : '';
       if(!reps){ const inp = el.closest('.set').querySelector('[data-f="reps"]'); inp?.focus(); toast('Digite as repetições'); return; }
@@ -1381,11 +1418,39 @@ $('#app').addEventListener('click', e => {
     save(); render(); return;
   }
   if(el.dataset.abrir){ abertos.add(el.dataset.abrir); render(); return; }
-  if(el.dataset.trocar){ trocando = trocando === el.dataset.trocar ? null : el.dataset.trocar; render(); return; }
+  if(el.dataset.trocar){ trocando = trocando === el.dataset.trocar ? null : el.dataset.trocar; buscaTxt = ''; render(); return; }
+  if(el.dataset.mais){
+    const t = tipoAtual(); const rd = rascunho(t); const o = el.dataset.mais;
+    rd.extras[o] = Math.min(5, (rd.extras[o] || 0) + 1);
+    const ex = exerciciosDoDia(t).find(x => x.orig === o); if(ex) abertos.add(ex.id);
+    save(); render(); return;
+  }
+  if(el.dataset.menos){
+    const rd = rascunho(tipoAtual()); const o = el.dataset.menos;
+    rd.extras[o] = Math.max(0, (rd.extras[o] || 0) - 1); if(!rd.extras[o]) delete rd.extras[o];
+    save(); render(); return;
+  }
+  if(el.dataset.fixar){
+    const t = tipoAtual(); const rd = rascunho(t); const orig = el.dataset.fixar; const alt = rd.trocas[orig];
+    const tr = plano().treinos[t]; const idx = tr.ex.findIndex(x => x.id === orig); const b = BIB_ID[alt];
+    if(!b || idx < 0) return;
+    if(tr.ex.some(x => x.id === alt)){ toast('Esse exercício já está no treino'); return; }
+    if(!confirm(`Trocar ${nomeEx(orig)} por ${b.nome} no Treino ${t} daqui pra frente?`)) return;
+    tr.ex[idx] = { id: alt, nome: b.nome, series: tr.ex[idx].series, reps: [...tr.ex[idx].reps] };
+    delete rd.trocas[orig];
+    if(rd.extras[orig]){ rd.extras[alt] = rd.extras[orig]; delete rd.extras[orig]; }
+    trocando = null; save(); render(); toast('Plano atualizado'); return;
+  }
+  if(el.dataset.addbusca && ed){
+    const ti = +el.dataset.ti;
+    ed.treinos[ti].ex.push(exDaBib(el.dataset.addbusca)); render();
+    setTimeout(() => document.querySelector(`[data-busca="ed"][data-ti="${ti}"]`)?.focus({ preventScroll: true }), 0);
+    return;
+  }
   if(el.dataset.alt != null && el.dataset.orig){
     const rd = rascunho(tipoAtual());
     if(el.dataset.alt) rd.trocas[el.dataset.orig] = el.dataset.alt; else delete rd.trocas[el.dataset.orig];
-    trocando = null; save(); render(); return;
+    trocando = null; buscaTxt = ''; save(); render(); return;
   }
   if(el.dataset.ir){ aba = el.dataset.ir; visao = 'semana'; render(); window.scrollTo(0, 0); return; }
   if(el.dataset.vol){ volModo = el.dataset.vol; render(); return; }
