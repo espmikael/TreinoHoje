@@ -434,3 +434,10 @@ body{font-variant-numeric:tabular-nums}
 .ex-acoes{justify-content:flex-end;gap:6px;margin-top:6px}
 .serie-btn{width:48px;height:32px;border-radius:8px;border:1px dashed var(--rule);background:transparent;color:var(--muted);font-size:20px;line-height:1;display:grid;place-items:center}
 .serie-btn:hover{color:var(--ink);border-color:var(--muted)}
+
+/* rodada 9: adicionar exercício no treino do dia */
+.add-ex-btn{width:100%;height:48px;margin-top:12px;border-radius:12px;border:1px dashed var(--rule);background:transparent;color:var(--muted);font-size:24px;line-height:1;display:grid;place-items:center}
+.add-ex-btn:hover{color:var(--ink);border-color:var(--muted)}
+.add-painel{margin-top:12px}
+.add-rodape{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.chip-mini{padding:6px 12px;font-size:13px}

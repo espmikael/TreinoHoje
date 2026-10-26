@@ -427,11 +427,32 @@ function telaHoje(){
 }
 
 function rascKey(t){ return db.planoAtivo + ':' + t; }
+const rascunhoVencido = rd => Date.now() - (rd.editado || rd.criado || Date.now()) > 16 * 3600e3;
+/* treino feito mas sem tocar em Concluir: nunca é descartado, é salvo sozinho com a data em que foi feito */
+function salvarEsquecidos(){
+  let n = 0;
+  for(const [rk, rd] of Object.entries(db.rascunhos)){
+    if(rk === 'corrida' || !rd || !rd.ex || !rascunhoVencido(rd)) continue;
+    const ex = {};
+    for(const [id, sets] of Object.entries(rd.ex)){
+      const feitos = (sets || []).filter(s => s && s.reps !== '' && s.reps != null).map(s => ({ kg: s.kg, reps: s.reps }));
+      if(feitos.length) ex[id] = feitos;
+    }
+    delete db.rascunhos[rk];
+    if(!Object.keys(ex).length) continue;
+    const i = rk.lastIndexOf(':'); const pid = rk.slice(0, i), t = rk.slice(i + 1);
+    const tr = db.planos[pid]?.treinos?.[t];
+    db.sessoes.push({ id: Date.now() + n, data: new Date(rd.editado || rd.criado).toISOString(), tipo: t, planoId: pid, nome: 'Treino ' + t, foco: tr ? tr.foco : '', ex, auto: true });
+    n++;
+  }
+  if(n){ ordenarSessoes(); save(); }
+  return n;
+}
 function rascunho(t){
   const rk = rascKey(t);
   let rd = db.rascunhos[rk];
-  /* rascunho esquecido (mais de 16 h) não vaza para o próximo treino: trocas e séries extras valem só no dia */
-  if(rd && rd.criado && Date.now() - rd.criado > 16 * 3600e3) rd = null;
+  /* rascunho parado há mais de 16 h não vaza para o próximo treino; se tinha séries feitas, vira registro no Histórico */
+  if(rd && rascunhoVencido(rd)){ salvarEsquecidos(); rd = null; }
   if(!rd) rd = db.rascunhos[rk] = { ex: {}, trocas: {}, extras: {}, criado: Date.now() };
   if(!rd.trocas) rd.trocas = {};
   if(!rd.extras) rd.extras = {};
@@ -452,7 +473,8 @@ function exerciciosDoDia(t){
     return { ...b, orig: id, base: b.series, series: b.series + extra, extra, trocado: false, avulso: true };
   }));
 }
-let addHoje = false;            // painel "+ exercício só hoje" aberto
+let addHoje = false;            // painel de adicionar exercício aberto
+let addPlano = false;           // ao adicionar, salvar também no plano
 function resultadosHoje(t, q){
   const excluir = exerciciosDoDia(t).map(x => x.id);
   const itens = q.trim() ? buscarBib(q, excluir) : BIB.filter(b => b.g === 'cardio' && !excluir.includes(b.id));
@@ -547,7 +569,7 @@ function telaTreino(t){
       <div class="ex-head"><div class="nome-i"><h2>${esc(e.nome)}</h2>${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}"><span>i</span></button>` : ''}</div><span class="ex-meta">${feitas}/${e.series} · ${cardio ? `${e.reps[0]}–${e.reps[1]} min` : `${e.base}${e.extra ? '+' + e.extra : ''} × ${e.reps[0]}–${e.reps[1]}`}</span></div>
       <div class="ex-sub"><p class="ultima">${ult}${e.obs ? ' · ' + esc(e.obs) : ''}</p>
         ${e.avulso ? `<button type="button" class="trocar" data-tirar="${e.orig}" aria-label="Tirar ${esc(e.nome)} do treino de hoje">Tirar</button>` : `<button type="button" class="trocar" data-trocar="${e.orig}" aria-expanded="${trocando === e.orig}">${trocando === e.orig ? 'Fechar' : (e.trocado ? 'Trocado' : 'Trocar')}</button>`}</div>
-      ${e.avulso ? '<p class="troca-info">Só hoje · não está no plano</p>' : ''}
+      ${e.avulso ? '' : ''}
       ${e.trocado ? `<p class="troca-info">Trocado só hoje · no plano: ${esc(nomeEx(e.orig))} · <button type="button" class="lnk lnk-mini" data-fixar="${e.orig}">Salvar no plano</button></p>` : ''}
       ${hint}${painel}
       <div class="sets">${linhas}</div>
@@ -559,11 +581,12 @@ function telaTreino(t){
     `<div class="sec"><span>Exercícios</span><span>${lista.length} · ${lista.filter(e => !ehCardio(e.id)).reduce((a, e) => a + e.series, 0)} séries · 1–2 da falha</span></div>
     <p class="dica">Toque no ✓ para repetir a última série. Digite só quando mudar.</p>
     <div class="lista-ex">${cards}</div>
-    ${addHoje ? `<section class="card"><div class="troca" style="margin-top:0"><p class="troca-t">Adicionar só hoje · bike, abdominal…</p>
-        <label class="busca">${ICON_LUPA}<input type="search" placeholder="Buscar pelo nome" data-busca="hoje" value="${esc(buscaTxt)}" aria-label="Buscar exercício para adicionar hoje" autocomplete="off"></label>
+    ${addHoje ? `<section class="card add-painel"><div class="troca" style="margin-top:0"><p class="troca-t">Adicionar exercício</p>
+        <label class="busca">${ICON_LUPA}<input type="search" placeholder="Buscar pelo nome" data-busca="hoje" value="${esc(buscaTxt)}" aria-label="Buscar exercício para adicionar" autocomplete="off"></label>
         <div class="chips" id="hoje-res">${resultadosHoje(t, buscaTxt)}</div></div>
-        <div class="ex-acoes"><button type="button" class="lnk lnk-mini" data-acao="add-hoje">Fechar</button></div></section>`
-      : `<div class="ex-acoes" style="justify-content:center"><button type="button" class="lnk lnk-mini" data-acao="add-hoje">+ Exercício só hoje</button></div>`}
+        <div class="add-rodape"><button type="button" class="chip chip-mini ${addPlano ? 'on' : ''}" aria-pressed="${addPlano}" data-acao="add-plano">${addPlano ? '✓ ' : ''}Salvar no plano</button>
+          <button type="button" class="lnk lnk-mini" data-acao="add-hoje">Fechar</button></div></section>`
+      : `<button type="button" class="add-ex-btn" data-acao="add-hoje" aria-label="Adicionar exercício ao treino">+</button>`}
     <div class="barra-fixa">${barraProgresso(t)}<button type="button" class="btn-fixo" data-acao="concluir" data-t="${t}">Concluir</button></div>`;
 }
 function barraProgresso(t){
@@ -958,7 +981,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v17 · out/2026';
+const VERSAO = 'v19 · out/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1342,6 +1365,7 @@ $('#app').addEventListener('input', e => {
     const e = exerciciosDoDia(t).find(x => x.id === el.dataset.ex);
     const sets = setsDe(rd, e);
     sets[+el.dataset.i][el.dataset.f] = el.value.trim();
+    rd.editado = Date.now();
     save();
     const row = el.closest('.set');
     if(row){
@@ -1445,6 +1469,7 @@ $('#app').addEventListener('click', e => {
       const reps = ls ? ls.reps : '';
       if(!reps){ const inp = el.closest('.set').querySelector('[data-f="reps"]'); inp?.focus(); toast(ehCardio(e.id) ? 'Digite os minutos' : 'Digite as repetições'); return; }
       sets[i] = { kg, reps };
+      rd.editado = Date.now();
       recemMarcado = e.id + ':' + i;
       vibrar(12);
       if(completo(sets)){ abertos.delete(e.id); recemFechado = e.id; recemMarcado = null; }
@@ -1454,9 +1479,14 @@ $('#app').addEventListener('click', e => {
   if(el.dataset.abrir){ abertos.add(el.dataset.abrir); render(); return; }
   if(el.dataset.avulso){
     const t = tipoAtual(); const rd = rascunho(t);
-    if(!rd.avulsos.includes(el.dataset.avulso)) rd.avulsos.push(el.dataset.avulso);
-    abertos.add(el.dataset.avulso); addHoje = false; buscaTxt = '';
-    save(); render(); toast('Adicionado só hoje'); return;
+    const id = el.dataset.avulso;
+    if(addPlano){
+      const tr = plano().treinos[t];
+      if(!tr.ex.some(x => x.id === id)) tr.ex.push(exDaBib(id));
+      rd.avulsos = rd.avulsos.filter(x => x !== id);
+    } else if(!rd.avulsos.includes(id)) rd.avulsos.push(id);
+    abertos.add(id); addHoje = false; buscaTxt = '';
+    save(); render(); toast(addPlano ? `Adicionado ao Treino ${t}` : 'Adicionado só hoje'); addPlano = false; return;
   }
   if(el.dataset.tirar){
     const rd = rascunho(tipoAtual()); const id = el.dataset.tirar;
@@ -1580,7 +1610,8 @@ $('#app').addEventListener('click', e => {
   if(acao === 'er-cancelar'){ edReg = null; render(); return; }
   if(acao === 'retro-abrir'){ retroAberto = true; const o = new Date(); o.setDate(o.getDate() - 1); retroData = diaISO(o); render(); setTimeout(() => $('#retro-data')?.focus(), 0); return; }
   if(acao === 'retro-fechar'){ retroAberto = false; retroData = ''; render(); return; }
-  if(acao === 'add-hoje'){ addHoje = !addHoje; buscaTxt = ''; render(); if(addHoje) setTimeout(() => document.querySelector('[data-busca="hoje"]')?.focus({ preventScroll: true }), 0); return; }
+  if(acao === 'add-plano'){ addPlano = !addPlano; render(); return; }
+  if(acao === 'add-hoje'){ addHoje = !addHoje; addPlano = false; buscaTxt = ''; render(); if(addHoje) setTimeout(() => document.querySelector('[data-busca="hoje"]')?.focus({ preventScroll: true }), 0); return; }
   if(acao === 'retro-hoje'){ escolherTipo(tipoAtual(), null); retroAberto = false; retroData = ''; render(); return; }
   if(acao === 'adiar-backup'){ const x = new Date(); x.setDate(x.getDate() + 7); db.backupAdiadoAte = x.toISOString(); save(); render(); }
   if(acao === 'fechar-instalar'){ db.vistoInstalar = true; instalarAberto = false; save(); render(); }
@@ -1640,4 +1671,5 @@ try{
 }catch(e){}
 
 aplicarTema(tema());
+{ const n = salvarEsquecidos(); if(n) setTimeout(() => toast(n === 1 ? 'Treino não concluído foi salvo no Histórico' : `${n} treinos não concluídos salvos no Histórico`), 600); }
 render();
