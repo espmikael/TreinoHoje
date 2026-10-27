@@ -214,7 +214,7 @@ function blocoMetas(){
     cards.push(`<section class="card"><div class="card-head"><span class="t">Meta de carga</span><span class="t">${prazo}</span></div>
       <div class="m-top"><span class="m-nome">${esc(cg.nome)}</span><span class="m-kg">${fmtNum(atual)} <span>→ ${fmtNum(cg.kg)} kg</span></span></div>
       <div class="prog"><i style="width:${pct}%"></i></div>
-      <p class="m-frase">${falta ? `Partiu de ${fmtNum(cg.inicio)} kg · faltam ${fmtNum(falta)} kg` : 'Meta batida.'}</p></section>`);
+      <p class="m-frase">${falta ? `${cg.inicio ? `Partiu de ${fmtNum(cg.inicio)} kg · ` : ''}faltam ${fmtNum(falta)} kg` : 'Meta batida.'}</p></section>`);
   });
   if(m.kmMes){
     const ref = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -427,7 +427,10 @@ function telaHoje(){
 }
 
 function rascKey(t){ return db.planoAtivo + ':' + t; }
-const rascunhoVencido = rd => Date.now() - (rd.editado || rd.criado || Date.now()) > 16 * 3600e3;
+function rascunhoVencido(rd){
+  const ult = rd.editado || rd.criado || Date.now(); const parado = Date.now() - ult;
+  return parado > 16 * 3600e3 || (diaISO(new Date(ult)) !== diaISO() && parado > 3 * 3600e3);
+}
 /* treino feito mas sem tocar em Concluir: nunca é descartado, é salvo sozinho com a data em que foi feito */
 function salvarEsquecidos(){
   let n = 0;
@@ -442,7 +445,7 @@ function salvarEsquecidos(){
     if(!Object.keys(ex).length) continue;
     const i = rk.lastIndexOf(':'); const pid = rk.slice(0, i), t = rk.slice(i + 1);
     const tr = db.planos[pid]?.treinos?.[t];
-    db.sessoes.push({ id: Date.now() + n, data: new Date(rd.editado || rd.criado).toISOString(), tipo: t, planoId: pid, nome: 'Treino ' + t, foco: tr ? tr.foco : '', ex, auto: true });
+    db.sessoes.push({ id: Date.now() + n, data: (rd.dataReg ? dataDeISO(rd.dataReg) : new Date(rd.editado || rd.criado)).toISOString(), tipo: t, planoId: pid, nome: 'Treino ' + t, foco: tr ? tr.foco : '', ex, auto: true });
     n++;
   }
   if(n){ ordenarSessoes(); save(); }
@@ -885,7 +888,7 @@ function formRegistro(s){
       ${sets.map((z, i) => `<div class="er-linha"><span class="n">${pad2(i + 1)}</span>
         <label class="field"><input inputmode="decimal" aria-label="${esc(nomeEx(id))}, série ${i + 1}, carga" data-er="kg" data-ex="${id}" data-i="${i}" value="${esc(String(z.kg ?? '').replace('.', ','))}"><small>${ehCardio(id) ? 'km' : 'kg'}</small></label>
         <label class="field"><input inputmode="numeric" aria-label="${esc(nomeEx(id))}, série ${i + 1}, repetições" data-er="reps" data-ex="${id}" data-i="${i}" value="${esc(z.reps)}"><small>${ehCardio(id) ? 'min' : 'reps'}</small></label></div>`).join('')}
-      <button type="button" class="lnk lnk-mini" data-erserie="${id}">+ série</button></div>`).join('');
+      <div class="ex-acoes"><button type="button" class="serie-btn" data-erserie="${id}" aria-label="Adicionar série em ${esc(nomeEx(id))}">+</button></div></div>`).join('');
     campos += `<p class="cs" style="margin-top:8px">Para tirar uma série, apague as repetições dela.</p>`;
   }
   return campoData + campos + `<div class="acoes" style="align-items:center;gap:16px;margin-top:14px">
@@ -981,7 +984,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v19 · out/2026';
+const VERSAO = 'v20 · out/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1365,7 +1368,7 @@ $('#app').addEventListener('input', e => {
     const e = exerciciosDoDia(t).find(x => x.id === el.dataset.ex);
     const sets = setsDe(rd, e);
     sets[+el.dataset.i][el.dataset.f] = el.value.trim();
-    rd.editado = Date.now();
+    rd.editado = Date.now(); rd.dataReg = dataRetro();
     save();
     const row = el.closest('.set');
     if(row){
@@ -1469,7 +1472,7 @@ $('#app').addEventListener('click', e => {
       const reps = ls ? ls.reps : '';
       if(!reps){ const inp = el.closest('.set').querySelector('[data-f="reps"]'); inp?.focus(); toast(ehCardio(e.id) ? 'Digite os minutos' : 'Digite as repetições'); return; }
       sets[i] = { kg, reps };
-      rd.editado = Date.now();
+      rd.editado = Date.now(); rd.dataReg = dataRetro();
       recemMarcado = e.id + ':' + i;
       vibrar(12);
       if(completo(sets)){ abertos.delete(e.id); recemFechado = e.id; recemMarcado = null; }
@@ -1493,7 +1496,7 @@ $('#app').addEventListener('click', e => {
     rd.avulsos = rd.avulsos.filter(x => x !== id); delete rd.ex[id]; delete rd.extras[id];
     save(); render(); return;
   }
-  if(el.dataset.trocar){ trocando = trocando === el.dataset.trocar ? null : el.dataset.trocar; buscaTxt = ''; render(); return; }
+  if(el.dataset.trocar){ trocando = trocando === el.dataset.trocar ? null : el.dataset.trocar; buscaTxt = ''; addHoje = false; render(); return; }
   if(el.dataset.mais){
     const t = tipoAtual(); const rd = rascunho(t); const o = el.dataset.mais;
     rd.extras[o] = Math.min(5, (rd.extras[o] || 0) + 1);
@@ -1611,7 +1614,7 @@ $('#app').addEventListener('click', e => {
   if(acao === 'retro-abrir'){ retroAberto = true; const o = new Date(); o.setDate(o.getDate() - 1); retroData = diaISO(o); render(); setTimeout(() => $('#retro-data')?.focus(), 0); return; }
   if(acao === 'retro-fechar'){ retroAberto = false; retroData = ''; render(); return; }
   if(acao === 'add-plano'){ addPlano = !addPlano; render(); return; }
-  if(acao === 'add-hoje'){ addHoje = !addHoje; addPlano = false; buscaTxt = ''; render(); if(addHoje) setTimeout(() => document.querySelector('[data-busca="hoje"]')?.focus({ preventScroll: true }), 0); return; }
+  if(acao === 'add-hoje'){ addHoje = !addHoje; addPlano = false; buscaTxt = ''; trocando = null; render(); if(addHoje) setTimeout(() => document.querySelector('[data-busca="hoje"]')?.focus({ preventScroll: true }), 0); return; }
   if(acao === 'retro-hoje'){ escolherTipo(tipoAtual(), null); retroAberto = false; retroData = ''; render(); return; }
   if(acao === 'adiar-backup'){ const x = new Date(); x.setDate(x.getDate() + 7); db.backupAdiadoAte = x.toISOString(); save(); render(); }
   if(acao === 'fechar-instalar'){ db.vistoInstalar = true; instalarAberto = false; save(); render(); }
