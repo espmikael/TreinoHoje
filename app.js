@@ -66,6 +66,8 @@ let aba = 'hoje';
 let tipoSel = (db.hoje && db.hoje.dia) ? db.hoje.tipo : null;
 let pedidoInstalar = null;
 let ultimaSalva = null;          // id do registro recém-salvo (banner de compartilhar)
+let concluido = null;            // janela de treino concluído aberta (id do registro)
+let imgCache = null;             // { id, blob, url } da imagem de compartilhar já gerada
 let visao = 'semana';            // semana | mes
 let mesOffset = 0;
 let dashEx = null;
@@ -343,6 +345,48 @@ function bannerSalvo(){
     ${pode ? `<button type="button" class="lnk" data-acao="desfazer">Desfazer</button>` : ''}
     <button type="button" class="mini-btn" data-share="${s.id}" aria-label="Compartilhar">${IC.share}<span class="so-largo">Compartilhar</span></button>
     <button type="button" class="x-btn" data-acao="fechar-banner" aria-label="Fechar">${IC.x}</button></div>`;
+}
+function folhaConcluido(id){
+  const s = db.sessoes.find(x => x.id === id); if(!s) return '';
+  const ts = tituloSessao(s); const corrida = s.tipo === 'corrida';
+  let linha;
+  if(corrida){
+    const c = s.corrida || {}; const pc = pace(num(c.km), num(c.min));
+    linha = [c.km ? fmtNum(num(c.km)) + ' km' : '', c.min ? fmtNum(num(c.min)) + ' min' : '', pc ? pc + ' /km' : ''].filter(Boolean).join(' · ');
+  } else {
+    const sets = Object.values(s.ex || {}).flat();
+    const prev = s.previsto ? Object.values(s.previsto).reduce((a, p) => a + p.series, 0) : 0;
+    const vol = sets.reduce((a, z) => a + (num(z.kg) || 0) * (num(z.reps) || 0), 0);
+    const nEx = Object.keys(s.ex || {}).length;
+    linha = [`${nEx} ${plural(nEx, 'exercício', 'exercícios')}`, `${prev ? sets.length + '/' + prev : sets.length} séries`, vol ? fmtMil(vol) + ' kg' : ''].filter(Boolean).join(' · ');
+  }
+  const pode = db.desfazer && db.desfazer.id === s.id && Date.now() - db.desfazer.em < 5 * 60e3;
+  const pronta = imgCache && imgCache.id === s.id;
+  return `<div class="folha-fundo" data-fundo="concluido"><section class="folha concluido" role="dialog" aria-modal="true" aria-labelledby="conc-tit">
+    <div class="folha-alca" aria-hidden="true"></div>
+    <p class="rot">${corrida ? 'Corrida concluída' : 'Treino concluído'}</p>
+    <h2 id="conc-tit">${esc(ts.nome)}${corrida ? '' : ' · ' + esc(ts.foco)}</h2>
+    <p class="cs" style="font-size:15px;margin-top:4px">${linha}</p>
+    <button type="button" class="conc-prev" data-acao="conc-share" aria-label="Compartilhar imagem do treino">
+      ${pronta ? `<img src="${imgCache.url}" alt="">` : '<span class="conc-carregando">Gerando imagem…</span>'}
+    </button>
+    <button type="button" class="btn conc-btn" data-acao="conc-share">${IC.share}Compartilhar</button>
+    <div class="acoes" style="justify-content:space-between;margin-top:4px">
+      ${pode ? '<button type="button" class="lnk" data-acao="desfazer">Desfazer</button>' : '<span></span>'}
+      <button type="button" class="lnk" data-acao="conc-fechar">Fechar</button></div>
+  </section></div>`;
+}
+async function prepararImagem(id){
+  if(imgCache && imgCache.id === id) return imgCache;
+  const s = db.sessoes.find(x => x.id === id); if(!s) return null;
+  const blob = await gerarImagem(s); if(!blob) return null;
+  if(imgCache) URL.revokeObjectURL(imgCache.url);
+  imgCache = { id, blob, url: URL.createObjectURL(blob) };
+  if(concluido === id){
+    const box = document.querySelector('.conc-prev');
+    if(box) box.innerHTML = `<img src="${imgCache.url}" alt="">`;
+  }
+  return imgCache;
 }
 function lembreteBackup(){
   if(db.sessoes.length < 3) return '';
@@ -1106,7 +1150,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v21 · nov/2026';
+const VERSAO = 'v22 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1415,12 +1459,12 @@ async function gerarImagem(s){
 }
 async function compartilhar(id){
   const s = db.sessoes.find(x => String(x.id) === String(id)); if(!s) return;
-  toast('Gerando imagem…');
-  const blob = await gerarImagem(s);
+  let blob = imgCache && imgCache.id === s.id ? imgCache.blob : null;
+  if(!blob){ toast('Gerando imagem…'); blob = await gerarImagem(s); }
   if(!blob){ toast('Não deu para gerar a imagem'); return; }
   const file = new File([blob], `treinohoje-${s.data.slice(0, 10)}.png`, { type: 'image/png' });
   if(navigator.canShare && navigator.canShare({ files: [file] })){
-    try{ await navigator.share({ files: [file], title: 'TreinoHoje' }); }catch(e){}
+    try{ await navigator.share({ files: [file], title: 'TreinoHoje' }); }catch(e){ if(e && e.name === 'NotAllowedError'){ toast('Toque de novo para compartilhar'); } }
   } else {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -1434,6 +1478,7 @@ async function compartilhar(id){
 function render(){
   const telas = { hoje: telaHoje, semana: telaSemana, historico: telaHistorico, plano: telaPlano, editor: telaEditor, gerador: telaGerador, metas: telaMetas };
   let html = telas[aba]() + (fichaAberta ? folhaFicha(fichaAberta) : '');
+  if(concluido && !html.includes('folha-fundo')) html += folhaConcluido(concluido);
   if(instalarAberto && !html.includes('folha-fundo')) html += folhaInstalar(true);
   $('#app').innerHTML = html;
   const navAba = (aba === 'editor' || aba === 'gerador' || aba === 'metas') ? 'plano' : aba;
@@ -1706,8 +1751,8 @@ $('#app').addEventListener('click', e => {
     ordenarSessoes();
     db.desfazer = { id, rk: rascKey(t), rascunho: clone(rd), tipo: t, retro: rt, em: Date.now() };
     retroAberto = false; retroData = '';
-    delete db.rascunhos[rascKey(t)]; limparEscolha(); abertos.clear(); trocando = null; addHoje = false; ultimaSalva = id;
-    vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0);
+    delete db.rascunhos[rascKey(t)]; limparEscolha(); abertos.clear(); trocando = null; addHoje = false; ultimaSalva = id; concluido = id;
+    vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0); prepararImagem(id);
   }
   if(acao === 'concluir-corrida'){
     const rd = db.rascunhos.corrida;
@@ -1717,14 +1762,14 @@ $('#app').addEventListener('click', e => {
     ordenarSessoes();
     db.desfazer = { id, rk: 'corrida', rascunho: clone(rd), tipo: 'corrida', retro: rt, em: Date.now() };
     retroAberto = false; retroData = '';
-    delete db.rascunhos.corrida; limparEscolha(); ultimaSalva = id;
-    vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0);
+    delete db.rascunhos.corrida; limparEscolha(); ultimaSalva = id; concluido = id;
+    vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0); prepararImagem(id);
   }
   if(acao === 'desfazer' && db.desfazer){
     const d = db.desfazer;
     db.sessoes = db.sessoes.filter(s => s.id !== d.id);
     db.rascunhos[d.rk] = d.rascunho; escolherTipo(d.tipo, d.retro || null);
-    db.desfazer = null; ultimaSalva = null; save(); render(); window.scrollTo(0, 0); toast('Registro desfeito');
+    db.desfazer = null; ultimaSalva = null; concluido = null; save(); render(); window.scrollTo(0, 0); toast('Registro desfeito');
   }
   if(acao === 'er-salvar' && edReg){ salvarRegistro(); return; }
   if(acao === 'er-cancelar'){ edReg = null; render(); return; }
@@ -1738,6 +1783,8 @@ $('#app').addEventListener('click', e => {
   if(acao === 'fechar-instalar'){ db.vistoInstalar = true; instalarAberto = false; save(); render(); }
   if(acao === 'como-instalar'){ instalarAberto = true; render(); }
   if(acao === 'fechar-banner'){ ultimaSalva = null; render(); }
+  if(acao === 'conc-fechar'){ concluido = null; render(); return; }
+  if(acao === 'conc-share'){ if(concluido) compartilhar(concluido); return; }
   if(acao === 'editar'){ abrirEditor(plano()); render(); window.scrollTo(0, 0); }
   if(acao === 'novo'){ abrirEditor(null); render(); window.scrollTo(0, 0); }
   if(acao === 'gerador'){ aba = 'gerador'; render(); window.scrollTo(0, 0); }
@@ -1760,7 +1807,11 @@ $('#app').addEventListener('click', e => {
   if(acao === 'instalar' && pedidoInstalar){ pedidoInstalar.prompt(); pedidoInstalar.userChoice.finally(() => { pedidoInstalar = null; render(); }); }
 });
 
-document.addEventListener('keydown', e => { if(e.key === 'Escape' && fichaAberta){ fichaAberta = null; render(); } });
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  if(fichaAberta){ fichaAberta = null; render(); } else if(concluido){ concluido = null; render(); }
+});
+$('#app').addEventListener('click', e => { if(e.target.dataset && e.target.dataset.fundo === 'concluido'){ concluido = null; render(); } });
 
 /* atualiza a data ao voltar para o app num outro dia */
 document.addEventListener('visibilitychange', () => {

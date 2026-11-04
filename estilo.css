@@ -400,7 +400,7 @@ body{font-variant-numeric:tabular-nums}
 /* ---------- rodada 4: sistema de botões ---------- */
 /* principal = .btn / .btn-fixo (vermelho, só concluir e salvar) · secundário = .mini-btn e .btn.sec-btn (contorno) · link = .lnk */
 .mini-btn,.mini-btn.ghost{height:44px;padding:0 16px;background:transparent;color:var(--ink);border:1px solid var(--rule);border-radius:8px;
-  font-weight:700;font-size:17px;letter-spacing:.04em;text-transform:uppercase}
+  font-weight:600;font-size:15px}
 .banner .mini-btn,.lembrete .mini-btn,.convite .mini-btn{height:40px}
 .btn.sec-btn{height:44px;font-size:17px;border-radius:8px}
 .lnk{min-height:44px;padding:0;background:none;border:0;color:var(--ink);font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
@@ -491,3 +491,13 @@ body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area
   .lista-ex .card,.lista-ex .ex-feito{margin-bottom:12px}
   .barra-fixa{max-width:none;margin-left:0}
 }
+
+/* ---------- rodada 11: janela de treino concluído ---------- */
+.folha.concluido{max-height:94vh;overflow-y:auto;text-align:left}
+.folha.concluido h2{font-size:28px}
+.conc-prev{display:flex;align-items:center;justify-content:center;width:100%;margin:16px 0 12px;padding:0;border:0;background:none;cursor:pointer}
+.conc-prev img{display:block;height:min(46vh,440px);width:auto;max-width:100%;aspect-ratio:9/16;border-radius:14px;border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.conc-carregando{display:grid;place-items:center;height:min(46vh,440px);aspect-ratio:9/16;border-radius:14px;border:1px dashed var(--rule);color:var(--muted);font-size:13px}
+.conc-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:0}
+.conc-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media (min-width:900px){ .folha.concluido{border-radius:18px;margin-bottom:5vh} .conc-btn{max-width:none} }
