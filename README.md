@@ -77,4 +77,3 @@ Em `exercicios.js`:
 
 ---
 
-Projeto pessoal de [Mikael Espindola](https://github.com/espmikael).
