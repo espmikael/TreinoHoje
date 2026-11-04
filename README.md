@@ -8,12 +8,16 @@ Caderno de treino pessoal: escolha o treino do dia, registre cargas e repetiçõ
 
 ## O que ele faz
 
-- **Treino do dia** — você escolhe o treino (A, B, C… ou corrida) e registra cada série. O ✓ repete a carga e as reps da última vez com um toque; exercícios concluídos encolhem.
+- **Treino do dia** — você escolhe o treino (A, B, C… ou corrida) e registra cada série. O ✓ repete a carga e as reps da última vez com um toque (para desfazer, apague as reps); exercícios concluídos encolhem.
+- **Ajustes do dia** — troque um exercício (aparelho ocupado), adicione séries com o + do card ou exercícios com o + no fim da lista. Vale só para o dia, a menos que você toque em *Salvar no plano*.
+- **Cardio** — bike, esteira, elíptico, escada, remo e corda são registrados por tempo (min) e distância opcional (km). A corrida tem aba própria, com pace.
+- **Treino esquecido** — se você não tocar em Concluir, o treino vai sozinho para o Histórico no dia seguinte.
 - **Fichas dos exercícios** — o (i) abre ilustrações de início e fim do movimento, músculos trabalhados e dicas de execução.
 - **Planos** — editor de planos, gerador automático (por dias, tempo e tipo de academia) e troca de exercício só no dia, quando o aparelho está ocupado.
 - **Metas** — frequência semanal, carga-alvo e km de corrida, todas opcionais. Inclui "semana leve" para semanas de prova ou entrega.
 - **Semana e mês** — calendário, sequência de semanas na meta e séries por grupo muscular.
-- **Histórico** — força estimada por exercício, treinos por semana e lista de registros.
+- **Histórico** — força estimada por exercício e registros por mês, com previsto × feito.
+- **Análise com IA** — exporta um resumo em texto da semana ou do mês (previsto × feito, cargas, volume, corrida) pronto para colar no Claude.
 - **Compartilhar** — gera uma imagem do treino no formato de story.
 - **Tema** — escuro (padrão), claro ou automático.
 
@@ -35,7 +39,7 @@ Instalado, ele abre em tela cheia, funciona offline e mantém a tela acesa duran
 
 ## Privacidade e dados
 
-Tudo fica salvo **só no seu aparelho** (armazenamento do navegador). Não há conta, servidor nem rastreamento.
+Tudo fica salvo **só no seu aparelho** (armazenamento do navegador). Não há conta, servidor, rastreamento nem arquivos de terceiros.
 
 Por isso, use **Plano → Ajustes → Exportar backup** de vez em quando, principalmente antes de trocar de celular. O app lembra você se o último backup tiver mais de 30 dias.
 
@@ -69,7 +73,7 @@ Em `exercicios.js`:
 ## Créditos
 
 - Ilustrações e ícone: próprios.
-- Fontes: [Big Shoulders Display](https://fonts.google.com/specimen/Big+Shoulders+Display), [IBM Plex Mono](https://fonts.google.com/specimen/IBM+Plex+Mono) e [Inter](https://fonts.google.com/specimen/Inter), via Google Fonts.
+- Fonte: a do sistema (SF Pro no iPhone e no Mac, Roboto no Android, Segoe UI no Windows). Nada é baixado de fora.
 
 ---
 
