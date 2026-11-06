@@ -75,6 +75,3 @@ Em `exercicios.js`:
 - Ilustrações e ícone: próprios.
 - Fonte: a do sistema (SF Pro no iPhone e no Mac, Roboto no Android, Segoe UI no Windows). Nada é baixado de fora.
 
----
-
-Projeto pessoal de [Mikael Espindola](https://github.com/espmikael).
