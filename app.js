@@ -542,7 +542,20 @@ const ICON_LUPA = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" c
 function buscarBib(q, excluir = []){
   const termos = normTxt(q).split(/\s+/).filter(Boolean);
   if(!termos.length) return [];
-  return BIB.filter(b => !excluir.includes(b.id) && termos.every(t => normTxt(b.nome + ' ' + (GRUPOS[b.g] || '')).includes(t))).slice(0, 10);
+  /* ordem: início do grupo muscular > início de palavra no nome > pedaço no meio de uma palavra ("ant" acha Antebraço antes de Panturrilha) */
+  const pontos = b => {
+    const nome = normTxt(b.nome), grupo = normTxt(GRUPOS[b.g] || ''), palavras = nome.split(/[^a-z0-9]+/);
+    let s = 0;
+    for(const t of termos){
+      if(grupo.startsWith(t)) s += 3;
+      else if(palavras.some(w => w.startsWith(t))) s += 2;
+      else if(nome.includes(t) || grupo.includes(t)) s += 1;
+      else return 0;
+    }
+    return s;
+  };
+  return BIB.filter(b => !excluir.includes(b.id)).map((b, i) => ({ b, s: pontos(b), i }))
+    .filter(x => x.s).sort((x, y) => y.s - x.s || x.i - y.i).slice(0, 12).map(x => x.b);
 }
 function resultadosTroca(e, lista, q){
   const voltar = e.trocado ? `<button type="button" class="chip" data-alt="" data-orig="${e.orig}">Voltar: ${esc(nomeEx(e.orig))}</button>` : '';
@@ -1150,7 +1163,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v24 · nov/2026';
+const VERSAO = 'v25 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
