@@ -926,7 +926,7 @@ let analiseAberta = false;
 function blocoAnalise(){
   const ops = [['semana', 'Esta semana'], ['semana-1', 'Semana passada'], ['mes', 'Este mês'], ['mes-1', 'Mês passado']];
   return `<div class="card"><div class="st-linha"><div><p class="m-nome">Análise com IA</p>
-      <p class="cs">Gera um resumo em texto do período: previsto × feito, cargas e corrida. Mande para o Claude analisar.</p></div>
+      <p class="cs">Gera um resumo em texto do período: previsto × feito, cargas e corrida. Mande para a IA que você usa analisar.</p></div>
       <button type="button" class="mini-btn" data-acao="analise" aria-expanded="${analiseAberta}">${analiseAberta ? 'Fechar' : 'Exportar'}</button></div>
     ${analiseAberta ? `<div class="chips" style="margin-top:12px">${ops.map(([k, n]) => `<button type="button" class="chip" data-analise="${k}">${n}</button>`).join('')}</div>` : ''}</div>`;
 }
@@ -1015,7 +1015,7 @@ async function exportarAnalise(k){
     try{ await navigator.share({ title: 'Análise TreinoHoje', text: txt }); return; }
     catch(e){ if(e && e.name === 'AbortError') return; }
   }
-  try{ await navigator.clipboard.writeText(txt); toast('Texto copiado: cole no Claude'); }
+  try{ await navigator.clipboard.writeText(txt); toast('Texto copiado: cole na sua IA'); }
   catch(e){
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/markdown' })); a.download = nome; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('Arquivo salvo');

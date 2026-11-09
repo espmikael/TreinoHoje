@@ -17,7 +17,7 @@ Caderno de treino pessoal: escolha o treino do dia, registre cargas e repetiçõ
 - **Metas** — frequência semanal, carga-alvo e km de corrida, todas opcionais. Inclui "semana leve" para semanas de prova ou entrega.
 - **Semana e mês** — calendário, sequência de semanas na meta e séries por grupo muscular.
 - **Histórico** — força estimada por exercício e registros por mês, com previsto × feito.
-- **Análise com IA** — exporta um resumo em texto da semana ou do mês (previsto × feito, cargas, volume, corrida) pronto para colar no Claude.
+- **Análise com IA** — exporta um resumo em texto da semana ou do mês (previsto × feito, cargas, volume, corrida) pronto para colar em qualquer IA.
 - **Compartilhar** — gera uma imagem do treino no formato de story.
 - **Tema** — escuro (padrão), claro ou automático.
 
