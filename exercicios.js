@@ -5,7 +5,7 @@
    g = grupo · k = c (composto) / i (isolado) · eq = b (academia básica serve) / m (precisa de máquina)
    r = faixa de repetições sugerida */
 const GRUPOS = { peito: 'Peito', costas: 'Costas', ombro: 'Ombros', biceps: 'Bíceps', triceps: 'Tríceps',
-  pernas: 'Quadríceps', posterior: 'Posterior de coxa', gluteos: 'Glúteos', panturrilha: 'Panturrilha', adutores: 'Adutores', core: 'Core', cardio: 'Cardio' };
+  pernas: 'Quadríceps', posterior: 'Posterior de coxa', gluteos: 'Glúteos', panturrilha: 'Panturrilha', adutores: 'Adutores', core: 'Core', antebraco: 'Antebraço', cardio: 'Cardio' };
 const BIB = [
   ['supino-reto', 'Supino reto (barra)', 'peito', 'c', 'b', 8, 12],
   ['supino-reto-halteres', 'Supino reto (halteres)', 'peito', 'c', 'b', 8, 12],
@@ -112,6 +112,11 @@ const BIB = [
   ['crucifixo-inclinado', 'Crucifixo inclinado (halteres)', 'peito', 'i', 'b', 10, 15],
   ['encolhimento-barra', 'Encolhimento com barra', 'costas', 'i', 'b', 10, 15],
   ['panturrilha-unilateral', 'Panturrilha unilateral (halter)', 'panturrilha', 'i', 'b', 10, 15],
+  /* antebraço: punho e braquiorradial, faixas mais altas */
+  ['rosca-punho-polia', 'Rosca de punho em pé na polia (barra reta)', 'antebraco', 'i', 'm', 12, 20],
+  ['rosca-punho-halter', 'Rosca de punho sentado com halter', 'antebraco', 'i', 'b', 12, 20],
+  ['rosca-punho-invertida', 'Rosca de punho invertida (palma para baixo)', 'antebraco', 'i', 'b', 15, 20],
+  ['rosca-inversa-polia', 'Rosca inversa na polia (barra reta)', 'antebraco', 'i', 'm', 10, 15],
   /* cardio: registrado por tempo (min) e distância opcional (km), sem carga */
   ['bike', 'Bike ergométrica', 'cardio', 'i', 'm', 10, 20],
   ['esteira', 'Esteira (caminhada ou corrida)', 'cardio', 'i', 'm', 10, 20],
@@ -283,6 +288,17 @@ const POSES = {
     A: { c: [36, 92], l: [[44, 96, 90, 98], [90, 98, 132, 98], [50, 98, 60, 102, 70, 102]], w: [] },
     B: { c: [36, 92], l: [[44, 96, 90, 98], [90, 98, 106, 76, 116, 56], [50, 98, 60, 102, 70, 102]], w: [] } },
 };
+/* sentado, antebraços apoiados nas coxas: o punho desce (A) e sobe (B) */
+const BANCO_PUNHO = [['r', 34, 74, 34, 6], ['l', 50, 80, 50, 104, 4]];
+const SENTADO_PUNHO = (mao) => [[58, 42, 56, 76], [56, 76, 90, 77, 90, 104], [59, 47, 70, 66, 91, 66, ...mao]];
+/* em pé de frente para a polia baixa, cotovelos dobrados a 90° colados ao corpo: o punho desce (A) e sobe (B) */
+const PE_PUNHO = (mao) => [[80, 26, 80, 62], [80, 62, 76, 104], [80, 62, 84, 104], [80, 30, 82, 50, 100, 50, ...mao]];
+POSES.punhoPoliaPe = { pr: [['l', 128, 104, 128, 90, 5]],
+  A: { c: [80, 18], l: PE_PUNHO([108, 58]), w: [['punho', 109, 59]], k: [[109, 59, 128, 94]] },
+  B: { c: [80, 18], l: PE_PUNHO([108, 41]), w: [['punho', 109, 40]], k: [[109, 40, 128, 94]] } };
+POSES.punhoBanco = { pr: BANCO_PUNHO,
+  A: { c: [58, 34], l: SENTADO_PUNHO([99, 76]), w: [['*', 101, 79]] },
+  B: { c: [58, 34], l: SENTADO_PUNHO([99, 56]), w: [['*', 101, 53]] } };
 POSES.voadorInverso = { pr: ASSENTO, A: POSES.voador.B, B: POSES.voador.A };
 Object.assign(POSES, {
   canivete: { pr: [],
@@ -322,6 +338,10 @@ Object.assign(POSES, {
 
 /* exercício → desenho, peso, músculos (p = principal, s = secundários) e execução */
 const FICHAS = {
+  'rosca-punho-polia':     { d: 'punhoPoliaPe', peso: 'punho', pad: 'Isolado · flexão de punho', p: ['antebraco'], s: [], dicas: ['Em pé, de frente para a polia baixa com barra reta, pegada com as palmas para cima.', 'Cotovelos colados ao corpo e dobrados a 90°: deixe o punho descer e enrole a barra para cima. Só o punho mexe.', 'Sem balançar o corpo nem mexer os cotovelos; movimento curto e controlado.'] },
+  'rosca-punho-halter':    { d: 'punhoBanco', peso: 'halter', pad: 'Isolado · flexão de punho', p: ['antebraco'], s: [], dicas: ['Sentado no banco, antebraço apoiado na coxa, palma para cima e punho para fora do joelho.', 'Desça o halter devagar e suba enrolando o punho. Um braço de cada vez ou os dois juntos.', 'Carga leve e reps altas: o antebraço responde melhor a 12–20 reps perto da falha.'] },
+  'rosca-punho-invertida': { d: 'punhoBanco', peso: 'halter', pad: 'Isolado · extensão de punho', p: ['antebraco'], s: [], dicas: ['Mesma posição da rosca de punho, mas com a palma para baixo. Vale com halter, barra ou na polia baixa.', 'Levante o dorso da mão para cima e desça devagar.', 'Use bem menos carga que na rosca de punho: os extensores são mais fracos.'] },
+  'rosca-inversa-polia':   { d: 'roscaPolia', peso: 'punho', pad: 'Isolado · flexão de cotovelo', p: ['antebraco'], s: ['biceps'], dicas: ['Polia baixa com barra reta, pegada pronada (palmas para baixo), na largura dos ombros.', 'Cotovelos colados ao corpo; suba até a barra chegar perto do peito.', 'Punho firme e reto o tempo todo: quem trabalha é o braquiorradial, o músculo grande do antebraço.'] },
   'supino-reto':           { d: 'supino', peso: 'barra', pad: 'Composto · empurrar horizontal', p: ['peito'], s: ['triceps', 'ombro'], dicas: ['Escápulas encaixadas e pés firmes no chão.', 'Desça controlando até a barra tocar o meio do peito.', 'Empurre até estender os braços sem tirar os ombros do banco.'] },
   'supino-reto-halteres':  { d: 'supino', peso: 'halter', pad: 'Composto · empurrar horizontal', p: ['peito'], s: ['triceps', 'ombro'], dicas: ['Halteres alinhados com o meio do peito.', 'Desça até sentir o alongamento do peito, cotovelos a ~45° do tronco.', 'Suba aproximando os halteres sem bater.'] },
   'supino-inclinado':      { d: 'inclinado', peso: 'halter', pad: 'Composto · empurrar inclinado', p: ['peito'], s: ['ombro', 'triceps'], dicas: ['Banco entre 30° e 45°.', 'Desça os halteres até a linha do peito superior.', 'Empurre para cima e levemente para dentro.'] },
@@ -340,7 +360,7 @@ const FICHAS = {
   'crucifixo-inverso':     { d: 'inversoCurvado', peso: 'halter', pad: 'Isolado · ombro posterior', p: ['ombro'], s: ['costas'], dicas: ['Tronco inclinado, coluna neutra.', 'Abra os braços para os lados com cotovelos levemente dobrados.', 'Pense em levar as mãos para longe, não para cima.'] },
   'face-pull':             { d: 'facePull', peso: 'punho', pad: 'Isolado · ombro posterior', p: ['ombro'], s: ['costas'], dicas: ['Corda na altura do rosto.', 'Puxe em direção à testa abrindo os cotovelos.', 'Gire os punhos para fora no final.'] },
   'rosca-direta':          { d: 'rosca', peso: 'barra', pad: 'Isolado · flexão de cotovelo', p: ['biceps'], s: [], dicas: ['Cotovelos fixos ao lado do corpo.', 'Suba sem jogar o tronco para trás.', 'Desça até estender totalmente os braços.'] },
-  'rosca-martelo':         { d: 'rosca', peso: 'halter', pad: 'Isolado · flexão de cotovelo', p: ['biceps'], s: [], dicas: ['Pegada neutra, palmas viradas uma para a outra.', 'Cotovelos fixos.', 'Suba e desça controlando, sem balanço.'] },
+  'rosca-martelo':         { d: 'rosca', peso: 'halter', pad: 'Isolado · flexão de cotovelo', p: ['biceps'], s: ['antebraco'], dicas: ['Pegada neutra, palmas viradas uma para a outra.', 'Cotovelos fixos.', 'Suba e desça controlando, sem balanço.'] },
   'rosca-alternada':       { d: 'rosca', peso: 'halter', pad: 'Isolado · flexão de cotovelo', p: ['biceps'], s: [], dicas: ['Um braço de cada vez, girando a palma para cima ao subir.', 'Cotovelo parado ao lado do corpo.', 'Desça até estender totalmente.'] },
   'rosca-scott':           { d: 'scott', peso: 'barra', pad: 'Isolado · flexão de cotovelo', p: ['biceps'], s: [], dicas: ['Parte de trás do braço apoiada no banco.', 'Desça até quase estender, sem travar.', 'Suba sem tirar o braço do apoio.'] },
   'triceps-pulley':        { d: 'pulley', peso: 'punho', pad: 'Isolado · extensão de cotovelo', p: ['triceps'], s: [], dicas: ['Cotovelos colados ao corpo.', 'Estenda até os braços ficarem retos.', 'Volte até o antebraço passar da horizontal.'] },
@@ -389,7 +409,7 @@ const FICHAS = {
   'rosca-polia-reta':      { d: 'roscaPolia', peso: 'punho', pad: 'Isolado · flexão de cotovelo', p: ['biceps'], s: [], dicas: ['Polia baixa, barra reta, cotovelos colados ao corpo.', 'Suba sem jogar o tronco para trás.', 'A polia mantém tensão até no fim da descida.'] },
   'rosca-polia-w':         { d: 'roscaPolia', peso: 'punho', pad: 'Isolado · flexão de cotovelo', p: ['biceps'], s: [], dicas: ['Polia baixa, barra W: punhos mais confortáveis que na reta.', 'Cotovelos fixos ao lado do corpo.', 'Desça até estender totalmente.'] },
   'rosca-concentrada':     { d: 'scott', peso: 'halter', pad: 'Isolado · flexão de cotovelo', p: ['biceps'], s: [], dicas: ['Sentado, cotovelo apoiado na parte interna da coxa.', 'Suba sem mexer o ombro.', 'Desça até estender o braço.'] },
-  'rosca-martelo-corda':   { d: 'roscaPolia', peso: 'punho', pad: 'Isolado · flexão de cotovelo', p: ['biceps'], s: [], dicas: ['Polia baixa com corda, pegada neutra.', 'Cotovelos fixos, suba até o antebraço passar da horizontal.', 'Desça devagar.'] },
+  'rosca-martelo-corda':   { d: 'roscaPolia', peso: 'punho', pad: 'Isolado · flexão de cotovelo', p: ['biceps'], s: ['antebraco'], dicas: ['Polia baixa com corda, pegada neutra.', 'Cotovelos fixos, suba até o antebraço passar da horizontal.', 'Desça devagar.'] },
   'triceps-pulley-barra':  { d: 'pulley', peso: 'punho', pad: 'Isolado · extensão de cotovelo', p: ['triceps'], s: [], dicas: ['Barra reta ou V, cotovelos colados ao corpo.', 'Estenda até os braços ficarem retos.', 'Volte até o antebraço passar da horizontal.'] },
   'triceps-coice':         { d: 'coice', peso: 'halter', pad: 'Isolado · extensão de cotovelo', p: ['triceps'], s: [], dicas: ['Tronco inclinado, braço colado ao corpo e paralelo ao chão.', 'Estenda o cotovelo levando o halter para trás.', 'Só o antebraço se move.'] },
   'triceps-banco':         { d: 'mergulho', peso: 'punho', pad: 'Composto · empurrar vertical', p: ['triceps'], s: ['peito', 'ombro'], dicas: ['Mãos na borda do banco, quadril perto dele.', 'Desça até os cotovelos formarem ~90°.', 'Se incomodar o ombro, troque por pulley.'] },
