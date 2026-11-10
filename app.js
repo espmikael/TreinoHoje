@@ -286,7 +286,7 @@ function salvarMetas(){
   let leveSemanas = db.metas.leveSemanas.filter(s => s !== sem);
   if(me.leve && me.academia) leveSemanas.push(sem);
   db.metas = { academia: me.academia, corrida: me.corrida, kmMes: me.kmMes, cargas: me.cargas, leveSemanas, ocultarConvite: db.metas.ocultarConvite };
-  me = null; aba = 'hoje'; save(); render(); window.scrollTo(0, 0); toast('Metas salvas');
+  me = null; aba = 'inicio'; save(); render(); window.scrollTo(0, 0); toast('Metas salvas');
 }
 
 let fichaAberta = null;
@@ -439,6 +439,132 @@ function folhaInstalar(forcar = false){
     ${pedidoInstalar ? `<button type="button" class="btn" data-acao="instalar" style="margin-top:16px">Instalar agora</button>` : ''}
     <button type="button" class="btn sec-btn" data-acao="fechar-instalar" style="margin-top:10px">${forcar ? 'Fechar' : 'Agora não'}</button>
   </section></div>`;
+}
+
+/* =========================================================
+   HOME — a aba Hoje sem treino aberto (rodada 11)
+   ========================================================= */
+function feitasDe(sets){ return (sets || []).filter(x => x && x.reps !== '' && x.reps != null).length; }
+/* treino de hoje com alguma série marcada (null se não houver) */
+function emAndamento(){
+  if(!db.hoje || db.hoje.dia !== diaISO() || !db.hoje.tipo) return null;
+  const t = db.hoje.tipo;
+  if(t === 'corrida'){
+    const r = db.rascunhos.corrida;
+    return r && (r.km || r.min) ? { t, corrida: true } : null;
+  }
+  if(!rotacao().includes(t)) return null;
+  const rd = db.rascunhos[rascKey(t)];
+  if(!rd || !rd.ex || rascunhoVencido(rd)) return null;
+  const lista = montarDia(plano(), t, rd);
+  let feitas = 0, total = 0, exFeitos = 0, atual = null;
+  lista.forEach(e => {
+    const f = Math.min(feitasDe(rd.ex[e.id]), e.series);
+    feitas += f; total += e.series; if(f >= e.series) exFeitos++;
+    else if(!atual) atual = { e, n: f + 1, ult: (rd.ex[e.id] || []).filter(x => x && x.reps !== '' && x.reps != null).pop() };
+  });
+  if(!feitas) return null;
+  return { t, feitas, total, exFeitos, nEx: lista.length, atual, min: Math.round((Date.now() - (rd.criado || Date.now())) / 6e4) };
+}
+/* próximo treino da rotação, depois do último feito neste plano */
+function proximoRot(){
+  const rot = rotacao(), p = plano();
+  for(let i = db.sessoes.length - 1; i >= 0; i--){
+    const s = db.sessoes[i];
+    if(s.tipo !== 'corrida' && doPlano(s, p) && rot.includes(s.tipo)) return rot[(rot.indexOf(s.tipo) + 1) % rot.length];
+  }
+  return rot[0];
+}
+function seriesPrevistas(t){ return plano().treinos[t].ex.reduce((a, e) => a + e.series, 0); }
+function saudacao(){ const h = new Date().getHours(); return h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; }
+function cardMetas(){
+  const m = db.metas;
+  if(!temMetaSemanal()){
+    if(m.ocultarConvite) return '';
+    return `<section class="convite"><div><p class="ct">Metas da semana</p><p class="cs">Quantas vezes por semana você quer treinar e correr?</p></div>
+      <button type="button" class="mini-btn" data-acao="metas">Definir</button>
+      <button type="button" class="x-btn" data-acao="ocultar-convite" aria-label="Ocultar">${IC.x}</button></section>`;
+  }
+  const ini = segunda(new Date()); const { g, c } = contaSemana(ini);
+  const ma = metaAcad(ini), mc = m.corrida;
+  const barra = (nome, f, tot, cls) => tot ? `<div class="hm-meta"><span class="hm-mn">${nome}</span><span class="hm-seg ${cls}" aria-hidden="true">${Array.from({ length: tot }, (_, i) => `<i class="${i < f ? 'on' : ''}"></i>`).join('')}</span><b>${Math.min(f, tot)}/${tot}</b></div>` : '';
+  /* dias da semana: verde = academia, âmbar = corrida, contorno = hoje */
+  const porDia = {};
+  db.sessoes.forEach(s => { const k = diaISO(new Date(s.data)); if(s.tipo === 'corrida'){ if(!porDia[k]) porDia[k] = 'c'; } else porDia[k] = 'g'; });
+  const hoje = diaISO(); let dias = '';
+  for(let i = 0; i < 7; i++){
+    const d = new Date(ini); d.setDate(d.getDate() + i); const k = diaISO(d);
+    dias += `<span class="hm-dia${porDia[k] ? ' ' + porDia[k] : ''}${k === hoje ? ' hoje' : ''}"><small>${'STQQSSD'[i]}</small><i></i></span>`;
+  }
+  const falta = Math.max(0, ma - g) + Math.max(0, mc - c);
+  const idx = (new Date().getDay() + 6) % 7, restam = 7 - idx;
+  const nota = !falta ? 'Meta da semana batida ✓' : falta > restam ? `Apertado: faltam ${falta} em ${restam} ${restam === 1 ? 'dia' : 'dias'}` : `No ritmo · faltam ${falta} em ${restam} ${restam === 1 ? 'dia' : 'dias'}`;
+  return `<section class="card hm-metas" aria-label="Metas da semana"><div class="hm-topo"><p class="rot">Metas da semana</p><button type="button" class="lnk lnk-mini" data-acao="metas">editar</button></div>
+    ${barra('Academia', g, ma, 'g')}${barra('Corrida', c, mc, 'c')}
+    <div class="hm-dias" aria-hidden="true">${dias}</div><p class="cs hm-nota">${nota}</p></section>`;
+}
+function cardsRodape(){
+  const ult = db.sessoes[db.sessoes.length - 1];
+  let a = '';
+  if(ult){
+    const d = new Date(ult.data); const dd = diasDesde(ult.data);
+    const quando = diaISO(d) === diaISO() ? 'hoje' : dd <= 1 && diaISO(new Date(Date.now() - DIA)) === diaISO(d) ? 'ontem' : d.toLocaleDateString('pt-BR', { weekday: 'long' }).replace('-feira', '');
+    let sub;
+    if(ult.tipo === 'corrida'){ const r = ult.corrida || {}; sub = [r.km ? fmtNum(num(r.km)) + ' km' : '', r.min ? esc(r.min) + ' min' : ''].filter(Boolean).join(' · ') || 'corrida'; }
+    else {
+      const feitas = Object.values(ult.ex || {}).reduce((x, v) => x + (v || []).length, 0);
+      const prev = ult.previsto ? Object.values(ult.previsto).reduce((x, v) => x + (v.series || 0), 0) : 0;
+      sub = prev ? `${feitas}/${prev} séries` : `${feitas} séries`;
+    }
+    a = `<button type="button" class="card hm-mini" data-ir="historico"><p class="rot">Último treino</p><p class="hm-mt">${ult.tipo === 'corrida' ? 'Corrida' : esc(ult.tipo)} · ${quando}</p><p class="cs">${sub}</p></button>`;
+  }
+  let b = '';
+  const ids = [...new Set(Object.values(plano().treinos).flatMap(t => t.ex.map(e => e.id)))];
+  for(const id of ids){
+    const st = statusEx(id);
+    if(st.k === 'parado'){ b = `<button type="button" class="card hm-mini hm-alerta" data-ir="historico" data-hex-ir="${id}"><p class="rot">Atenção</p><p class="hm-mt">${esc(nomeEx(id))}</p><p class="cs">parado há ${st.sem} sem.</p></button>`; break; }
+  }
+  if(!a && !b) return '';
+  return `<div class="hm-dupla${a && b ? '' : ' um'}">${a}${b}</div>`;
+}
+function telaHome(){
+  const rot = rotacao();
+  const and = emAndamento();
+  const topo = bannerSalvo() + lembreteBackup();
+  const outroDia = retroAberto && retroData && retroData !== diaISO();
+  let rotulo, titulo, principal;
+  if(and){
+    const nome = and.corrida ? 'Corrida' : 'Treino ' + and.t;
+    rotulo = '<span class="hm-verde">Treino em andamento</span>';
+    titulo = and.corrida ? 'Corrida<br>começada' : `${nome}<br>${and.feitas * 2 >= and.total ? 'passou da metade' : 'começado'}`;
+    const pct = and.corrida ? 0 : Math.round(and.feitas / and.total * 100);
+    const agora = and.atual ? `<p class="cs hm-agora">Agora: <b>${esc(and.atual.e.nome)}</b> · ${and.atual.n}ª série${and.atual.ult ? ' · ' + serieTxt(and.atual.e.id, and.atual.ult) : ''}</p>` : '';
+    principal = `<section class="card hm-prox">
+      ${and.corrida ? '' : `<div class="hm-linha"><p class="hm-t">${and.exFeitos} de ${and.nEx} exercícios</p><p class="cs">${and.feitas}/${and.total} séries${and.min > 0 && and.min < 300 ? ' · ' + and.min + ' min' : ''}</p></div>
+      <div class="hm-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Séries feitas"><i style="width:${pct}%"></i></div>`}
+      ${agora}<button type="button" class="btn" data-tipo="${and.t}" data-home="1">Continuar treino</button></section>`;
+  } else {
+    const prox = proximoRot();
+    const feitoHoje = db.sessoes.some(s => diaISO(new Date(s.data)) === diaISO() && s.tipo !== 'corrida');
+    const tr = plano().treinos[prox];
+    const outros = [...rot.filter(k => k !== prox), 'corrida'];
+    const chips = outros.map(k => `<button type="button" class="hm-chip" data-tipo="${k}" data-home="1">${k === 'corrida' ? 'Corrida' : k}</button>`).join('') +
+      `<button type="button" class="hm-chip${retroAberto ? ' on' : ''}" data-acao="${retroAberto ? 'retro-fechar' : 'retro-abrir'}" aria-expanded="${retroAberto}">Outro dia</button>`;
+    if(outroDia){ rotulo = 'Outro dia'; titulo = `Lançar treino<br>de ${fmtDia(retroData)}`; }
+    else if(feitoHoje){ rotulo = saudacao(); titulo = 'Treino de hoje<br>feito ✓'; }
+    else { rotulo = saudacao(); titulo = `Hoje é dia<br>de Treino ${esc(prox)}`; }
+    const q = quandoFoi(prox);
+    principal = `<section class="card hm-prox"><p class="rot hm-verde">${feitoHoje && !outroDia ? 'Próximo, amanhã' : 'Próximo na rotação'}</p>
+      <p class="hm-t">Treino ${esc(prox)}${tr.foco ? ' · ' + esc(tr.foco) : ''}</p>
+      <p class="cs">${tr.ex.length} exercícios · ${seriesPrevistas(prox)} séries${q !== 'nunca' ? ' · último ' + esc(prox) + ' ' + q : ''}</p>
+      <button type="button" class="btn${feitoHoje && !outroDia ? ' sec-btn' : ''}" data-tipo="${prox}" data-home="1">${outroDia ? 'Lançar' : 'Começar'} Treino ${esc(prox)}</button>
+      <div class="hm-chips">${chips}</div>
+      ${retroAberto ? `<div class="retro-box"><label class="lb" for="retro-data">Data do treino</label>
+        <input class="inp" type="date" id="retro-data" data-retro="1" value="${esc(retroData)}" min="${limiteRetro()}" max="${diaISO()}">
+        <p class="cs" style="margin-top:6px">${outroDia ? `Toque no treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p></div>` : ''}
+    </section>`;
+  }
+  return topo + cab(rotulo, titulo, '', calendario(outroDia ? dataDeISO(retroData) : new Date())) + principal + cardMetas() + cardsRodape() + folhaInstalar();
 }
 
 function telaHoje(){
@@ -1258,7 +1384,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v32 · nov/2026';
+const VERSAO = 'v33 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1585,7 +1711,7 @@ async function compartilhar(id){
    RENDER + EVENTOS
    ========================================================= */
 function render(){
-  const telas = { hoje: telaHoje, semana: telaSemana, historico: telaHistorico, plano: telaPlano, editor: telaEditor, gerador: telaGerador, metas: telaMetas };
+  const telas = { inicio: telaHome, hoje: telaHoje, semana: telaSemana, historico: telaHistorico, plano: telaPlano, editor: telaEditor, gerador: telaGerador, metas: telaMetas };
   let html = telas[aba]() + (fichaAberta ? folhaFicha(fichaAberta) : '');
   if(concluido && !html.includes('folha-fundo')) html += folhaConcluido(concluido);
   if(instalarAberto && !html.includes('folha-fundo')) html += folhaInstalar(true);
@@ -1723,7 +1849,12 @@ $('#app').addEventListener('click', e => {
   const el = e.target.closest('button'); if(!el || el.disabled) return;
   if(el.dataset.ficha){ fichaAberta = el.dataset.ficha; render(); return; }
   if(el.dataset.acao === 'fechar-ficha'){ fichaAberta = null; render(); return; }
-  if(el.dataset.tipo){ escolherTipo(el.dataset.tipo, el.classList.contains('escolha') ? (retroAberto && retroData ? retroData : null) : undefined); render(); window.scrollTo(0, 0); return; }
+  if(el.dataset.tipo){
+    const continuar = el.dataset.home && emAndamento() && emAndamento().t === el.dataset.tipo;
+    const novo = !continuar && (el.classList.contains('escolha') || el.dataset.home);
+    escolherTipo(el.dataset.tipo, novo ? (retroAberto && retroData ? retroData : null) : undefined);
+    aba = 'hoje'; render(); window.scrollTo(0, 0); return;
+  }
   if(el.dataset.sens){ db.rascunhos.corrida.sens = db.rascunhos.corrida.sens === el.dataset.sens ? '' : el.dataset.sens; save(); render(); return; }
   if(el.dataset.visao){ visao = el.dataset.visao; mesOffset = 0; render(); return; }
   if(el.dataset.mes){ mesOffset = Math.min(0, mesOffset + +el.dataset.mes); render(); return; }
@@ -1799,7 +1930,7 @@ $('#app').addEventListener('click', e => {
     if(el.dataset.alt) rd.trocas[el.dataset.orig] = el.dataset.alt; else delete rd.trocas[el.dataset.orig];
     trocando = null; buscaTxt = ''; save(); render(); return;
   }
-  if(el.dataset.ir){ aba = el.dataset.ir; visao = 'semana'; render(); window.scrollTo(0, 0); return; }
+  if(el.dataset.ir){ if(el.dataset.hexIr) histEx = el.dataset.hexIr; aba = el.dataset.ir; visao = 'semana'; render(); window.scrollTo(0, 0); return; }
   if(el.dataset.vol){ volModo = el.dataset.vol; render(); return; }
   if(el.dataset.secao){ planoSecao = el.dataset.secao; render(); return; }
   if(el.dataset.modo){ dashModo = el.dataset.modo; render(); return; }
@@ -1864,7 +1995,7 @@ $('#app').addEventListener('click', e => {
     ordenarSessoes();
     db.desfazer = { id, rk: rascKey(t), rascunho: clone(rd), tipo: t, retro: rt, em: Date.now() };
     retroAberto = false; retroData = '';
-    delete db.rascunhos[rascKey(t)]; limparEscolha(); abertos.clear(); trocando = null; addHoje = false; ultimaSalva = id; concluido = id;
+    delete db.rascunhos[rascKey(t)]; limparEscolha(); abertos.clear(); trocando = null; addHoje = false; ultimaSalva = id; concluido = id; aba = 'inicio';
     vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0); prepararImagem(id);
   }
   if(acao === 'concluir-corrida'){
@@ -1875,7 +2006,7 @@ $('#app').addEventListener('click', e => {
     ordenarSessoes();
     db.desfazer = { id, rk: 'corrida', rascunho: clone(rd), tipo: 'corrida', retro: rt, em: Date.now() };
     retroAberto = false; retroData = '';
-    delete db.rascunhos.corrida; limparEscolha(); ultimaSalva = id; concluido = id;
+    delete db.rascunhos.corrida; limparEscolha(); ultimaSalva = id; concluido = id; aba = 'inicio';
     vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0); prepararImagem(id);
   }
   if(acao === 'desfazer' && db.desfazer){
@@ -1927,7 +2058,11 @@ document.addEventListener('keydown', e => {
 $('#app').addEventListener('click', e => { if(e.target.dataset && e.target.dataset.fundo === 'concluido'){ concluido = null; render(); } });
 
 /* atualiza a data ao voltar para o app num outro dia */
+let escondidoEm = 0;
 document.addEventListener('visibilitychange', () => {
+  if(document.hidden) escondidoEm = Date.now();
+  /* voltou depois de um tempo e não tem treino em andamento: abre na home */
+  else if(escondidoEm && Date.now() - escondidoEm > 30 * 6e4 && !emAndamento() && aba === 'hoje') aba = 'inicio';
   if(!document.hidden && aba !== 'editor' && aba !== 'metas' && !document.activeElement?.matches('input,select')) render();
   else gerirTela();
 });
@@ -1957,4 +2092,5 @@ try{
 
 aplicarTema(tema());
 { const n = salvarEsquecidos(); if(n) setTimeout(() => toast(n === 1 ? 'Treino não concluído foi salvo no Histórico' : `${n} treinos não concluídos salvos no Histórico`), 600); }
+aba = emAndamento() ? 'hoje' : 'inicio';
 render();
