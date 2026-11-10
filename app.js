@@ -1084,35 +1084,135 @@ function salvarRegistro(){
   ordenarSessoes(); edReg = null; save(); render(); toast('Registro atualizado');
 }
 
+/* ---------- histórico: resumo (destaques, músculos, consistência) + exercícios com detalhe ---------- */
+let histPer = 'p8', histEx = null, histModo = 'forca';
+const PERIODOS = { p4: ['4 semanas', 28], p8: ['8 semanas', 56], p3m: ['3 meses', 91], tudo: ['Tudo', Infinity] };
+const DIA = 864e5;
+function pontosEx(id, modo, desde){
+  return db.sessoes.filter(s => s.ex && s.ex[id] && (!desde || new Date(s.data) >= desde)).map(s => {
+    let v = 0;
+    for(const z of s.ex[id]){
+      const kg = num(z.kg) || 0, r = num(z.reps) || 0;
+      if(modo === 'volume') v += kg * r;
+      else if(kg) v = Math.max(v, modo === 'forca' ? forcaEst(kg, r) : kg);
+    }
+    return { d: s.data, v, sets: s.ex[id] };
+  }).filter(p => p.v > 0);
+}
+function statusEx(id){
+  const pts = pontosEx(id, 'forca'); const agora = Date.now();
+  if(pts.length < 2 || agora - new Date(pts[0].d) < 21 * DIA) return { k: 'novo', t: 'poucos dados', o: 4 };
+  const corte = agora - 21 * DIA;
+  const rec = pts.filter(p => new Date(p.d) >= corte), ant = pts.filter(p => new Date(p.d) < corte);
+  if(!rec.length) return { k: 'pausa', t: 'sem treinar há 3+ sem.', o: 3 };
+  const bR = Math.max(...rec.map(p => p.v)), bA = Math.max(...ant.map(p => p.v));
+  if(bR > bA * 1.01) return { k: 'sobe', t: '↑ subindo', o: 2 };
+  if(bR < bA * 0.97) return { k: 'cai', t: '↓ caiu', o: 0 };
+  let max = 0, dRec = pts[0].d; pts.forEach(p => { if(p.v > max){ max = p.v; dRec = p.d; } });
+  const sem = Math.max(3, Math.floor((agora - new Date(dRec)) / (7 * DIA)));
+  return { k: 'parado', t: `→ parado há ${sem} sem.`, o: 1, sem };
+}
+function sparkSvg(vs, k){
+  if(vs.length < 2) return '<span class="hp-sp-vazio">—</span>';
+  const W = 110, H = 30, mn = Math.min(...vs), mx = Math.max(...vs), rg = (mx - mn) || 1;
+  const p = vs.map((v, i) => [W * i / (vs.length - 1), H - 4 - (H - 8) * (v - mn) / rg]);
+  return `<svg class="hp-sp ${k}" viewBox="-4 0 ${W + 8} ${H}" aria-hidden="true"><polyline points="${p.map(q => q.map(n => n.toFixed(1)).join(',')).join(' ')}"/><circle cx="${p[p.length - 1][0].toFixed(1)}" cy="${p[p.length - 1][1].toFixed(1)}" r="3"/></svg>`;
+}
+const melhorTxt = sets => { let b = null; sets.forEach(z => { const kg = num(z.kg) || 0, r = num(z.reps) || 0; if(kg && (!b || forcaEst(kg, r) > forcaEst(b.kg, b.r))) b = { kg, r }; }); return b ? `${fmtNum(b.kg)} kg × ${b.r}` : '—'; };
+function letraDe(id){ const p = plano(); for(const t of p.rotacao) if(p.treinos[t].ex.some(e => e.id === id)) return t; return null; }
+function faixaDe(id){ for(const p of Object.values(db.planos)) for(const t of Object.values(p.treinos)){ const e = t.ex.find(x => x.id === id); if(e) return e.reps; } return BIB_ID[id] ? BIB_ID[id].r : null; }
+function proximoPasso(id, sets){
+  const fx = faixaDe(id); if(!fx || !sets || !sets.length) return '';
+  const falta = sets.reduce((a, z) => a + Math.max(0, fx[1] - (num(z.reps) || 0)), 0);
+  if(!falta) return `<b class="ok">Pode subir a carga</b> na próxima: bateu ${fx[1]} reps em todas as séries.`;
+  return `Faltam <b>${falta} ${plural(falta, 'rep', 'reps')}</b> para bater ${fx[1]} em todas as séries e subir a carga.`;
+}
+function painelHist(){
+  const [nomeP, dias] = PERIODOS[histPer];
+  const agora = new Date(), desde = dias === Infinity ? null : new Date(agora - dias * DIA);
+  const noPer = db.sessoes.filter(s => !desde || new Date(s.data) >= desde);
+  const primeira = db.sessoes.length ? new Date(db.sessoes[0].data) : agora;
+  const semanas = Math.max(1, ((agora - (desde && desde > primeira ? desde : primeira)) / DIA) / 7);
+  const filtros = `<div class="hp-per" role="group" aria-label="Período">${Object.entries(PERIODOS).map(([k, [n]]) => `<button type="button" data-hper="${k}" class="${k === histPer ? 'on' : ''}" aria-pressed="${k === histPer}">${n}</button>`).join('')}</div>`;
+  /* exercícios com força no período */
+  const ids = [...new Set(noPer.flatMap(s => Object.keys(s.ex || {})))].filter(id => !ehCardio(id) && pontosEx(id, 'forca', desde).length);
+  const info = ids.map(id => { const pts = pontosEx(id, 'forca', desde); return { id, pts, st: statusEx(id), d: pts.length >= 2 ? pts[pts.length - 1].v - pts[0].v : null }; });
+  /* destaques */
+  const dest = [];
+  const evol = info.filter(x => x.d > 0).sort((a, b) => b.d - a.d)[0];
+  if(evol) dest.push(['ok', 'Maior evolução', `${esc(nomeEx(evol.id))} +${fmtNum(evol.d)} kg`, `força estimada · ${nomeP.toLowerCase()}`, evol.id]);
+  const par = info.filter(x => x.st.k === 'parado' || x.st.k === 'cai').sort((a, b) => (b.st.sem || 9) - (a.st.sem || 9))[0];
+  if(par){ const u = par.pts[par.pts.length - 1]; dest.push(['aviso', par.st.k === 'cai' ? 'Caiu nas últimas semanas' : `Parado há ${par.st.sem} semanas`, `${esc(nomeEx(par.id))} · ${melhorTxt(u.sets)}`, 'tente subir a carga, mudar a faixa de reps ou trocar a variação', par.id]); }
+  let rec = null;
+  ids.forEach(id => { const pts = pontosEx(id, 'forca'); for(let i = pts.length - 1; i > 0; i--){ if(agora - new Date(pts[i].d) > 7 * DIA) break; const antes = Math.max(...pts.slice(0, i).map(p => p.v)); if(pts[i].v > antes && (!rec || pts[i].v / antes > rec.g)) rec = { id, g: pts[i].v / antes, sets: pts[i].sets }; } });
+  if(rec) dest.push(['ok', 'Recorde da semana', `${esc(nomeEx(rec.id))} · ${melhorTxt(rec.sets)}`, 'melhor série desde que começou', rec.id]);
+  const destHtml = dest.length ? `<div class="hp-dest">${dest.map(([c, t, x, s, id]) => `<button type="button" class="card hp-d ${c}" data-hex="${id}"><span class="rot">${t}</span><b>${x}</b><span class="cs">${s}</span></button>`).join('')}</div>`
+    : `<div class="card hp-poucos"><p class="cs">Os destaques (maior evolução, o que está parado e os recordes) aparecem com algumas semanas de registros.</p></div>`;
+  /* volume por músculo */
+  const vol = {};
+  noPer.forEach(s => Object.entries(s.ex || {}).forEach(([id, sets]) => {
+    if(ehCardio(id)) return; const f = FICHAS[id], n = sets.length;
+    if(f){ f.p.forEach(g => vol[g] = (vol[g] || 0) + n); f.s.forEach(g => vol[g] = (vol[g] || 0) + n / 2); }
+    else if(BIB_ID[id]) vol[BIB_ID[id].g] = (vol[BIB_ID[id].g] || 0) + n;
+  }));
+  const vl = Object.entries(vol).map(([g, n]) => [g, n / semanas]).sort((a, b) => b[1] - a[1]);
+  const volHtml = vl.length ? vl.map(([g, n]) => { const ok = n >= 10 && n <= 20; return `<div class="hp-vl"><span>${GRUPOS[g] || g}</span><div class="hp-bar"><i class="faixa"></i><i class="v ${ok ? 'ok' : 'aviso'}" style="width:${Math.min(100, n / 22 * 100).toFixed(0)}%"></i></div><b class="${ok ? 'ok' : 'aviso'}">${fmtNum(Math.round(n * 10) / 10)}</b></div>`; }).join('') + `<p class="cs hp-nota">Séries por semana · a faixa tracejada é 10–20, o que a ciência indica para crescer (secundários contam ½)</p>`
+    : '<p class="cs">Registre treinos de musculação para ver o volume por músculo.</p>';
+  /* consistência: 12 semanas */
+  const ini12 = segunda(agora); ini12.setDate(ini12.getDate() - 7 * 11);
+  const porDia = {}; db.sessoes.forEach(s => { const k = diaISO(new Date(s.data)); porDia[k] = porDia[k] === 'g' || s.tipo !== 'corrida' ? 'g' : 'c'; });
+  let cols = '';
+  for(let w = 0; w < 12; w++){
+    let c = '';
+    for(let d = 0; d < 7; d++){ const dt = new Date(ini12); dt.setDate(dt.getDate() + w * 7 + d); const k = porDia[diaISO(dt)]; const fut = dt > agora; c += `<i class="${k === 'g' ? 'g' : k === 'c' ? 'c' : ''}${fut ? ' fut' : ''}" title="${dt.toLocaleDateString('pt-BR')}"></i>`; }
+    cols += `<div>${c}</div>`;
+  }
+  const gym = noPer.filter(s => s.tipo !== 'corrida'), km = noPer.filter(s => s.tipo === 'corrida').reduce((a, s) => a + (num(s.corrida?.km) || 0), 0);
+  let feitas = 0, prev = 0; gym.forEach(s => { if(s.previsto){ prev += Object.values(s.previsto).reduce((a, p) => a + p.series, 0); feitas += Object.values(s.ex || {}).reduce((a, l) => a + l.length, 0); } });
+  const nums = [[fmtNum(Math.round(gym.length / semanas * 10) / 10), 'treinos/semana'], km ? [fmtNum(km), 'km de corrida'] : null, prev ? [Math.round(feitas / prev * 100) + '%', 'séries feitas'] : null].filter(Boolean);
+  const consHtml = `<div class="hp-cal" aria-label="Dias com treino nas últimas 12 semanas">${cols}</div>
+    <div class="hp-leg"><span><i class="g"></i>academia</span><span><i class="c"></i>corrida</span></div>
+    <div class="hp-nums">${nums.map(([n, t]) => `<div><b>${n}</b><span class="rot">${t}</span></div>`).join('')}</div>`;
+  /* lista + detalhe */
+  info.sort((a, b) => a.st.o - b.st.o || nomeEx(a.id).localeCompare(nomeEx(b.id)));
+  const sel = info.find(x => x.id === histEx) || info[0];
+  const lista = info.map(x => { const t = letraDe(x.id), g = BIB_ID[x.id] ? GRUPOS[BIB_ID[x.id].g] : '';
+    return `<button type="button" class="hp-ex ${sel && x.id === sel.id ? 'on' : ''}" data-hex="${x.id}" aria-pressed="${sel && x.id === sel.id}">
+      <span class="hp-ex-n"><b>${esc(nomeEx(x.id))}</b><small>${t ? 'Treino ' + t + ' · ' : ''}${g}</small></span>
+      ${sparkSvg(x.pts.slice(-12).map(p => p.v), x.st.k)}
+      <span class="hp-ex-v"><b>${fmtNum(x.pts[x.pts.length - 1].v)} kg</b><small class="${x.st.k}">${x.d == null ? x.st.t : (x.d >= 0 ? '+' : '') + fmtNum(x.d) + ' kg'}</small></span></button>`; }).join('');
+  let det = '';
+  if(sel){
+    const pts = pontosEx(sel.id, histModo, desde), todos = pontosEx(sel.id, 'forca');
+    const u = pts[pts.length - 1], dlt = pts.length >= 2 ? u.v - pts[0].v : null;
+    const recorde = todos.length >= 2 && todos[todos.length - 1].v >= Math.max(...todos.map(p => p.v));
+    const ultSets = todos[todos.length - 1].sets;
+    const g = BIB_ID[sel.id] ? GRUPOS[BIB_ID[sel.id].g] : '', t = letraDe(sel.id);
+    const legenda = { forca: 'força estimada (1RM) da melhor série', carga: 'maior peso usado em cada treino', volume: 'kg levantados no treino (peso × reps)' }[histModo];
+    det = `<button type="button" class="lnk hp-voltar" data-hvoltar="1">← Exercícios</button>
+      <p class="rot">${t ? 'Treino ' + t + ' · ' : ''}${g}</p><h2 class="hp-t">${esc(nomeEx(sel.id))}</h2>
+      <div class="hp-modo" role="group" aria-label="Medida">${[['forca', 'Força'], ['carga', 'Carga'], ['volume', 'Volume']].map(([k, n]) => `<button type="button" data-hmodo="${k}" class="${k === histModo ? 'on' : ''}" aria-pressed="${k === histModo}">${n}</button>`).join('')}</div>
+      ${u ? `<div class="hp-big"><b>${fmtNum(Math.round(u.v * 10) / 10)}</b><span>kg</span>${dlt != null ? `<em class="${dlt >= 0 ? 'ok' : 'cai'}">${dlt >= 0 ? '+' : ''}${fmtNum(Math.round(dlt * 10) / 10)} kg · ${nomeP.toLowerCase()}</em>` : ''}${recorde ? `<em class="rec">recorde ${fmtData(todos[todos.length - 1].d)}</em>` : ''}</div>
+      <p class="cs">${legenda}</p>
+      ${pts.length >= 2 ? `<div class="chart" style="margin-top:6px">${graficoLinha(pts)}</div>` : `<p class="chart-vazio">Mais um treino com esse exercício e a linha aparece aqui.</p>`}` : '<p class="chart-vazio">Sem registros nesse período.</p>'}
+      <div class="hp-info">
+        <div><span class="rot">Melhor série</span><b>${melhorTxt(todos.flatMap(p => p.sets))}</b></div>
+        <div><span class="rot">Última vez · ${fmtData(todos[todos.length - 1].d)}</span><b>${ultSets.map(z => serieTxt(sel.id, z)).join(' · ')}</b></div>
+        <div class="hp-prox"><span class="rot">Próximo passo</span><p>${proximoPasso(sel.id, ultSets)}</p></div></div>`;
+  }
+  const exHtml = info.length ? `<div class="hp-split ${histEx ? 'sel' : ''}">
+      <div class="card hp-lista"><p class="rot" style="margin-bottom:6px">Exercícios · os que precisam de atenção primeiro</p>${lista}</div>
+      <div class="card hp-det ${histEx ? '' : 'auto'}">${det}</div></div>`
+    : '<div class="card"><p class="chart-vazio">Registre cargas para ver a evolução dos exercícios.</p></div>';
+  return `<div class="hp-topo">${filtros}</div>${destHtml}
+    <div class="hp-duo"><div class="card"><p class="rot">Volume por músculo · ${nomeP.toLowerCase()}</p>${volHtml}</div>
+      <div class="card"><p class="rot">Consistência · últimas 12 semanas</p>${consHtml}</div></div>
+    <div class="sec"><span>Exercícios</span><span>${info.length}</span></div>${exHtml}`;
+}
+
 function telaHistorico(){
   const topo = cab(`${db.sessoes.length} registros`, 'Histórico');
   if(!db.sessoes.length) return topo + `<p class="vazio">Nenhum treino registrado ainda.</p>`;
-  const agora = new Date();
-  const ini = new Date(agora.getFullYear(), agora.getMonth(), 1);
-  const doMes = db.sessoes.filter(s => new Date(s.data) >= ini);
-  const kmMes = doMes.filter(s => s.tipo === 'corrida').reduce((a, s) => a + (num(s.corrida?.km) || 0), 0);
-
-  const conta = {};
-  db.sessoes.forEach(s => s.ex && Object.entries(s.ex).forEach(([id, sets]) => { if(!ehCardio(id) && sets.some(x => num(x.kg))) conta[id] = (conta[id] || 0) + 1; }));
-  const exs = Object.keys(conta).sort((a, b) => conta[b] - conta[a]);
-  if(!dashEx || !conta[dashEx]) dashEx = exs[0] || null;
-  let cargaCard;
-  if(!dashEx){
-    cargaCard = `<p class="chart-vazio">Registre cargas para ver a evolução.</p>`;
-  } else {
-    const pts = serieCarga(dashEx);
-    const opts = exs.map(id => `<option value="${id}" ${id === dashEx ? 'selected' : ''}>${esc(nomeEx(id))}</option>`).join('');
-    const ult = pts[pts.length - 1], pri = pts[0];
-    const delta = ult && pri ? ult.v - pri.v : 0;
-    cargaCard = `<div class="card-head"><select id="dash-ex" aria-label="Exercício">${opts}</select>
-        <div class="toggle mini" role="group" aria-label="Medida">
-          <button type="button" data-modo="forca" class="${dashModo === 'forca' ? 'on' : ''}" aria-pressed="${dashModo === 'forca'}">Força</button>
-          <button type="button" data-modo="carga" class="${dashModo === 'carga' ? 'on' : ''}" aria-pressed="${dashModo === 'carga'}">Carga</button></div></div>
-      ${ult ? `<div class="forca-n"><b>${fmtNum(ult.v)}</b><span>kg</span>${pts.length >= 2 ? `<em>${delta >= 0 ? '+' : ''}${fmtNum(delta)} kg desde ${fmtData(pri.d)}</em>` : ''}</div>` : ''}
-      <p class="cs">${dashModo === 'forca' ? 'Força estimada (1RM) da melhor série: junta peso e repetições, então 40×12 e 45×5 ficam comparáveis.' : 'Maior peso usado em cada treino.'}</p>` +
-      (pts.length >= 2 ? `<div class="chart" style="margin-top:8px">${graficoLinha(pts)}</div>` : `<p class="chart-vazio">Mais um treino com ${esc(nomeEx(dashEx))} e a linha aparece aqui.</p>`);
-  }
-
   const mesDe = s => { const d = new Date(s.data); return d.getFullYear() + '-' + d.getMonth(); };
   let mesAtual = null;
   const itens = db.sessoes.slice().reverse().map(s => {
@@ -1150,13 +1250,7 @@ function telaHistorico(){
         <button type="button" class="del" data-del="${s.id}">Excluir</button></div></div></details>`;
   }
 
-  return topo + `<div class="sec"><span>Painel</span><span>${agora.toLocaleDateString('pt-BR', { month: 'long' })}</span></div>
-    <div class="stats">
-      <div class="stat"><b>${doMes.filter(s => s.tipo !== 'corrida').length}</b><span>treinos</span></div>
-      <div class="stat"><b>${kmMes ? fmtNum(kmMes) : '0'}</b><span>km</span></div>
-      <div class="stat"><b>${subidasDeCarga()}</b><span>subidas de carga</span></div>
-    </div>
-    <div class="card" style="margin-top:12px">${cargaCard}</div>
+  return topo + painelHist() + `
     ${blocoAnalise()}
     ${itens}`;
 }
@@ -1164,7 +1258,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v30 · nov/2026';
+const VERSAO = 'v32 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1709,6 +1803,10 @@ $('#app').addEventListener('click', e => {
   if(el.dataset.vol){ volModo = el.dataset.vol; render(); return; }
   if(el.dataset.secao){ planoSecao = el.dataset.secao; render(); return; }
   if(el.dataset.modo){ dashModo = el.dataset.modo; render(); return; }
+  if(el.dataset.hper){ histPer = el.dataset.hper; render(); return; }
+  if(el.dataset.hmodo){ histModo = el.dataset.hmodo; render(); return; }
+  if(el.dataset.hex){ histEx = el.dataset.hex; render(); if(matchMedia('(max-width: 899px)').matches) setTimeout(() => document.querySelector('.hp-det')?.scrollIntoView({ block: 'start' }), 0); else document.querySelector('.hp-det')?.scrollIntoView({ block: 'nearest' }); return; }
+  if(el.dataset.hvoltar){ histEx = null; render(); setTimeout(() => document.querySelector('.hp-lista')?.scrollIntoView({ block: 'start' }), 0); return; }
   if(el.dataset.so){ soInstalar = el.dataset.so; render(); return; }
   if(el.dataset.step && me){
     const c = el.dataset.step, passo = c === 'kmMes' ? 5 : 1, max = c === 'kmMes' ? 500 : 7;

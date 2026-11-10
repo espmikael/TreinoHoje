@@ -2,9 +2,10 @@
    O app continua funcionando sem conta: tudo é salvo primeiro no aparelho.
    Quem entra ganha backup na nuvem e o mesmo histórico no celular e no PC. */
 const NUVEM = {
-  url: 'https://avvheyvodewuhpdvytim.supabase.co',
-  chave: 'sb_publishable_tB7UaNfScyk-BMW0hxd4Rw_3SUQBZy8',   // chave pública: quem protege os dados é o login + as regras da tabela
+  url: 'https://lkajsfiwwwxacmwixkat.supabase.co',
+  chave: 'sb_publishable_zQF8QmCnZyHrmGcqWuGwcw_nNrdvTf1',   // chave pública: quem protege os dados é o login + as regras da tabela
   tabela: 'treinohoje',
+  site: 'https://espmikael.github.io/TreinoHoje/',   // para onde os links dos e-mails levam
 };
 const NUVEM_KEY = 'treinohoje:nuvem';
 /* o que é só deste aparelho (treino em andamento, escolha do dia, avisos) não vai para a nuvem */
@@ -65,11 +66,21 @@ async function nuvemEntrar(email, senha){
     toast('Conectado: seus treinos agora têm backup na nuvem');
   }catch(e){ nvErro = 'Sem conexão com a nuvem agora. Tente de novo mais tarde.'; render(); }
 }
+async function nuvemEsqueci(email){
+  nvErro = '';
+  if(!email){ nvErro = 'Digite seu e-mail acima e toque em "Esqueci a senha" de novo.'; render(); return; }
+  nvEmail = email;
+  try{
+    const r = await nvReq('/auth/v1/recover?redirect_to=' + encodeURIComponent(NUVEM.site), { method: 'POST', body: JSON.stringify({ email }) }, false);
+    if(!r.ok && /429|rate/i.test(msgErro(r))){ nvErro = 'Muitos pedidos. Espere um pouco antes de pedir outro e-mail.'; render(); return; }
+    toast('Se esse e-mail tiver conta, chega um link para criar uma senha nova');
+  }catch(e){ nvErro = 'Sem conexão com a nuvem agora. Tente de novo mais tarde.'; render(); }
+}
 async function nuvemCriar(email, senha){
   nvErro = ''; nvEmail = email;
   if(senha.length < 6){ nvErro = 'Use uma senha com pelo menos 6 caracteres.'; render(); return; }
   try{
-    const r = await nvReq('/auth/v1/signup', { method: 'POST', body: JSON.stringify({ email, password: senha }) }, false);
+    const r = await nvReq('/auth/v1/signup?redirect_to=' + encodeURIComponent(NUVEM.site), { method: 'POST', body: JSON.stringify({ email, password: senha }) }, false);
     if(!r.ok){
       const m = msgErro(r);
       nvErro = /already|registered|exists/i.test(m) ? 'Esse e-mail já tem conta. Use "Entrar".'
@@ -160,14 +171,14 @@ window.blocoNuvem = function(){
   if(!nvLogado() && nvEstado !== 'expirada'){
     return `<div id="nuvem-box"><div class="sec"><span>Sincronizar</span><span>opcional</span></div>
       <div class="card txt">
-        <p class="cs">Entre com sua conta (a mesma do MyFinance) para ter backup automático na nuvem e ver seus treinos também no PC. Sem entrar, tudo continua funcionando só neste aparelho.</p>
+        <p class="cs">Entre com sua conta para ter backup automático na nuvem e ver seus treinos também no PC. Sem entrar, tudo continua funcionando só neste aparelho.</p>
         ${!nvForm ? '' : `<form class="nuvem-form" data-nuvem-form="${nvModo}">
             <label class="nv-campo"><span>E-mail</span><input class="inp" type="email" name="email" autocomplete="username" inputmode="email" value="${esc(nvEmail)}" required></label>
             <label class="nv-campo"><span>Senha${nvModo === 'criar' ? ' (mínimo 6 caracteres)' : ''}</span><input class="inp" type="password" name="senha" autocomplete="${nvModo === 'criar' ? 'new-password' : 'current-password'}" required></label>
             ${nvErro ? `<p class="nv-erro" role="alert">${esc(nvErro)}</p>` : ''}
             <div class="acoes" style="align-items:center;gap:16px"><button type="submit" class="mini-btn">${nvModo === 'criar' ? 'Criar conta' : 'Entrar'}</button>
               <button type="button" class="lnk" data-nuvem="cancelar">Cancelar</button></div>
-            <p class="cs" style="margin:0">${nvModo === 'criar' ? 'Já tem conta? <button type="button" class="lnk lnk-mini" data-nuvem="modo-entrar">Entrar</button>' : 'Não tem conta? <button type="button" class="lnk lnk-mini" data-nuvem="modo-criar">Criar conta</button>'}</p>
+            <p class="cs" style="margin:0">${nvModo === 'criar' ? 'Já tem conta? <button type="button" class="lnk lnk-mini" data-nuvem="modo-entrar">Entrar</button>' : 'Não tem conta? <button type="button" class="lnk lnk-mini" data-nuvem="modo-criar">Criar conta</button> · <button type="button" class="lnk lnk-mini" data-nuvem="esqueci">Esqueci a senha</button>'}</p>
           </form>`}
         ${nvForm ? '' : `<div class="acoes"><button type="button" class="mini-btn" data-nuvem="abrir">Entrar</button></div>`}
       </div></div>`;
@@ -192,6 +203,7 @@ document.getElementById('app').addEventListener('click', e => {
   const a = b.dataset.nuvem;
   if(a === 'abrir'){ nvForm = true; nvErro = ''; render(); setTimeout(() => document.querySelector('[data-nuvem-form] input')?.focus(), 0); }
   if(a === 'cancelar'){ nvForm = false; nvErro = ''; nvModo = 'entrar'; render(); }
+  if(a === 'esqueci'){ const f = document.querySelector('[data-nuvem-form]'); nuvemEsqueci(f ? f.email.value.trim() : ''); }
   if(a === 'modo-criar' || a === 'modo-entrar'){ const f = document.querySelector('[data-nuvem-form]'); if(f) nvEmail = f.email.value.trim(); nvModo = a === 'modo-criar' ? 'criar' : 'entrar'; nvErro = ''; render(); }
   if(a === 'agora') sincronizar(true);
   if(a === 'sair') nuvemSair();
@@ -205,6 +217,50 @@ document.getElementById('app').addEventListener('submit', e => {
   f.querySelector('[type=submit]').disabled = true;
   if(f.dataset.nuvemForm === 'criar') nuvemCriar(email, senha); else nuvemEntrar(email, senha);
 });
+/* ---------- links dos e-mails: confirmar cadastro e criar senha nova ---------- */
+function janelaSenha(){
+  let m = document.getElementById('nuvem-janela');
+  if(!m){ m = document.createElement('div'); m.id = 'nuvem-janela'; document.body.appendChild(m); }
+  m.innerHTML = `<div class="folha-fundo"><section class="folha" role="dialog" aria-modal="true" aria-labelledby="nv-ns-t">
+    <div class="folha-alca" aria-hidden="true"></div>
+    <p class="rot">Sua conta · ${esc((nv.sessao && nv.sessao.email) || '')}</p>
+    <h2 id="nv-ns-t" style="margin:4px 0 12px">Crie uma senha nova</h2>
+    <form class="nuvem-form" id="nv-ns-form">
+      <label class="nv-campo"><span>Senha nova (mínimo 6 caracteres)</span><input class="inp" type="password" name="senha" autocomplete="new-password" required></label>
+      <p class="nv-erro" id="nv-ns-erro" role="alert"></p>
+      <div class="acoes" style="align-items:center;gap:16px"><button type="submit" class="mini-btn">Salvar senha</button><button type="button" class="lnk" id="nv-ns-x">Agora não</button></div>
+    </form></section></div>`;
+  const fechar = () => { m.innerHTML = ''; };
+  m.querySelector('#nv-ns-x').onclick = fechar;
+  m.querySelector('#nv-ns-form').onsubmit = async e => {
+    e.preventDefault(); const s = e.target.senha.value; const er = m.querySelector('#nv-ns-erro');
+    if(s.length < 6){ er.textContent = 'Use pelo menos 6 caracteres.'; return; }
+    try{
+      await nvToken();
+      const r = await nvReq('/auth/v1/user', { method: 'PUT', body: JSON.stringify({ password: s }) });
+      if(!r.ok){ er.textContent = /same|different/i.test(msgErro(r)) ? 'Escolha uma senha diferente da antiga.' : 'Não deu pra salvar. Peça outro e-mail de recuperação.'; return; }
+      fechar(); toast('Senha nova salva. Use ela também no app instalado.');
+    }catch(err){ er.textContent = 'Sem conexão agora. Tente de novo.'; }
+  };
+  setTimeout(() => m.querySelector('input').focus(), 50);
+}
+async function voltaDoEmail(){
+  const h = new URLSearchParams(location.hash.slice(1));
+  if(!h.get('access_token') && !h.get('error')) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  if(h.get('error')){ toast(/expired/i.test(h.get('error_code') || h.get('error_description') || '') ? 'Esse link expirou. Peça outro e-mail.' : 'Esse link não funcionou. Peça outro e-mail.'); return; }
+  try{
+    const tok = h.get('access_token');
+    const r = await fetch(NUVEM.url + '/auth/v1/user', { headers: { apikey: NUVEM.chave, Authorization: 'Bearer ' + tok } });
+    const u = await r.json(); if(!r.ok || !u.id) throw new Error('usuario');
+    nvGuardarSessao({ access_token: tok, refresh_token: h.get('refresh_token'), expires_in: +h.get('expires_in') || 3600, user: u });
+    nv.sinc = 0; nv.nuvemEm = null; nvSalvar(); nvEstado = 'enviando';
+    if(h.get('type') === 'recovery') janelaSenha(); else toast('E-mail confirmado: você já está conectado');
+    await sincronizar(true);
+  }catch(e){ toast('Não deu pra entrar pelo link. Entre com e-mail e senha.'); }
+}
+voltaDoEmail();
+window.addEventListener('hashchange', voltaDoEmail);
 window.addEventListener('online', () => sincronizar());
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'hidden' && nvTimer){ clearTimeout(nvTimer); nvTimer = null; sincronizar(); }   // fechou o app logo depois de mexer
