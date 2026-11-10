@@ -1,12 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#1c1c1b"/>
-  <g transform="rotate(-30 256 256)">
-    <rect x="150" y="236" width="212" height="40" rx="10" fill="#ece8df"/>
-    <rect x="112" y="160" width="46" height="192" rx="16" fill="#b5c48a"/>
-    <rect x="354" y="160" width="46" height="192" rx="16" fill="#b5c48a"/>
-    <rect x="72" y="196" width="40" height="120" rx="14" fill="#b5c48a"/>
-    <rect x="400" y="196" width="40" height="120" rx="14" fill="#b5c48a"/>
-    <rect x="50" y="240" width="26" height="32" rx="8" fill="#ece8df"/>
-    <rect x="436" y="240" width="26" height="32" rx="8" fill="#ece8df"/>
+  <defs>
+    <linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262624"/><stop offset="1" stop-color="#0e0e0d"/></linearGradient>
+    <radialGradient id="b" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#d8ff4a" stop-opacity=".35"/><stop offset="1" stop-color="#d8ff4a" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#f)"/>
+  <circle cx="256" cy="256" r="229" fill="url(#b)"/>
+  <g transform="translate(256 256) scale(0.86) rotate(-30) translate(-256 -256)">
+    <rect x="150" y="236" width="212" height="40" rx="10" fill="#ffffff"/>
+    <rect x="112" y="160" width="46" height="192" rx="16" fill="#d8ff4a"/>
+    <rect x="354" y="160" width="46" height="192" rx="16" fill="#d8ff4a"/>
+    <rect x="72" y="196" width="40" height="120" rx="14" fill="#d8ff4a"/>
+    <rect x="400" y="196" width="40" height="120" rx="14" fill="#d8ff4a"/>
+    <rect x="50" y="240" width="26" height="32" rx="8" fill="#ffffff"/>
+    <rect x="436" y="240" width="26" height="32" rx="8" fill="#ffffff"/>
   </g>
 </svg>
