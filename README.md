@@ -72,7 +72,7 @@ Em `exercicios.js`:
 
 ## Créditos
 
-- Ilustrações e ícone: próprios.
+- Ilustrações (silhuetas sem rosto, de lado e de frente) e ícone: próprios.
 - Fonte: a do sistema (SF Pro no iPhone e no Mac, Roboto no Android, Segoe UI no Windows). Nada é baixado de fora.
 
 ---

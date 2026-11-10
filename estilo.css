@@ -4,12 +4,12 @@
 :root{--f:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
 :root, :root[data-theme="claro"]{
   --bg:#f2ece0;--surface:#faf7f0;--field:#f2ece0;--ink:#24221e;--muted:#68625a;--line:#e2dacb;--rule:#d1c7b4;
-  --brand:#4b5a2e;--brand-soft:#e4e7d3;--brand-ink:#faf7f0;
+  --brand:#4b5a2e;--brand-soft:#e4e7d3;--brand-ink:#faf7f0;--mus:#a9bb72;
   --action:#a63b2c;--action-ink:#faf7f0;--action-soft:#f3e1db;--action-text:#8a2f22;
 }
 :root[data-theme="escuro"]{
   --bg:#1c1c1b;--surface:#262624;--field:#1f1f1e;--ink:#ece8df;--muted:#a8a399;--line:#363532;--rule:#47453f;
-  --brand:#b5c48a;--brand-soft:#2b3022;--brand-ink:#1c1c1b;
+  --brand:#b5c48a;--brand-soft:#2b3022;--brand-ink:#1c1c1b;--mus:#b5c48a;
   --action:#b2402f;--action-ink:#f7f3ea;--action-soft:#382622;--action-text:#eeaa9d;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -501,3 +501,16 @@ body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area
 .conc-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:0}
 .conc-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @media (min-width:900px){ .folha.concluido{border-radius:18px;margin-bottom:5vh} .conc-btn{max-width:none} }
+
+/* ---------- rodada 12: ilustrações em silhueta ---------- */
+.pose.fig line{stroke-linecap:round}
+.pose.fig .b{fill:var(--ink);stroke:var(--ink)}
+.pose.fig path.b,.pose.fig ellipse.b,.pose.fig circle.b,.pose.fig rect.b{stroke:none}
+.pose.fig .bt{stroke:var(--muted);opacity:.75}
+.pose.fig .bh{stroke:var(--bg)}
+.pose.fig .mu{fill:var(--mus)}
+.pose.fig .mu2{opacity:.5}
+.pose.fig .pz{fill:var(--rule);stroke:var(--muted);stroke-width:2}
+.pose.fig .pzc{fill:var(--bg)}
+.pose.fig .pz-l{stroke:var(--muted)}
+.pose.fig .cabo{stroke:var(--muted);stroke-width:1.5}
