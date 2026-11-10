@@ -49,6 +49,8 @@ function load(){
   d.metas = Object.assign({ academia: 0, corrida: 0, kmMes: 0, cargas: [], leveSemanas: [], ocultarConvite: false }, d.metas);
   if(!d.planos || !Object.keys(d.planos).length){ d.planos = { padrao: clone(PLANO_PADRAO) }; d.planoAtivo = 'padrao'; }
   if(!d.planos[d.planoAtivo]) d.planoAtivo = Object.keys(d.planos)[0];
+  /* primeiro acesso: quem já tem registros ou planos próprios já passou por ele */
+  if(d.configurado === undefined) d.configurado = d.sessoes.length > 0 || Object.keys(d.planos).some(k => k !== 'padrao');
   if(!d.migr12){
     Object.values(d.planos).forEach(p => Object.values(p.treinos).forEach(t => t.ex.forEach(e => {
       if(e.reps[0] === 6 && e.reps[1] === 10) e.reps = [8, 12];
@@ -479,12 +481,8 @@ function seriesPrevistas(t){ return plano().treinos[t].ex.reduce((a, e) => a + e
 function saudacao(){ const h = new Date().getHours(); return h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; }
 function cardMetas(){
   const m = db.metas;
-  if(!temMetaSemanal()){
-    if(m.ocultarConvite) return '';
-    return `<section class="convite"><div><p class="ct">Metas da semana</p><p class="cs">Quantas vezes por semana você quer treinar e correr?</p></div>
-      <button type="button" class="mini-btn" data-acao="metas">Definir</button>
-      <button type="button" class="x-btn" data-acao="ocultar-convite" aria-label="Ocultar">${IC.x}</button></section>`;
-  }
+  if(metasEditando) return metasInline();
+  if(!temMetaSemanal()) return m.ocultarConvite ? '' : metasInline();
   const ini = segunda(new Date()); const { g, c } = contaSemana(ini);
   const ma = metaAcad(ini), mc = m.corrida;
   const barra = (nome, f, tot, cls) => tot ? `<div class="hm-meta"><span class="hm-mn">${nome}</span><span class="hm-seg ${cls}" aria-hidden="true">${Array.from({ length: tot }, (_, i) => `<i class="${i < f ? 'on' : ''}"></i>`).join('')}</span><b>${Math.min(f, tot)}/${tot}</b></div>` : '';
@@ -499,7 +497,7 @@ function cardMetas(){
   const falta = Math.max(0, ma - g) + Math.max(0, mc - c);
   const idx = (new Date().getDay() + 6) % 7, restam = 7 - idx;
   const nota = !falta ? 'Meta da semana batida ✓' : falta > restam ? `Apertado: faltam ${falta} em ${restam} ${restam === 1 ? 'dia' : 'dias'}` : `No ritmo · faltam ${falta} em ${restam} ${restam === 1 ? 'dia' : 'dias'}`;
-  return `<section class="card hm-metas" aria-label="Metas da semana"><div class="hm-topo"><p class="rot">Metas da semana</p><button type="button" class="lnk lnk-mini" data-acao="metas">editar</button></div>
+  return `<section class="card hm-metas" aria-label="Metas da semana"><div class="hm-topo"><p class="rot">Metas da semana</p><button type="button" class="lnk lnk-mini" data-acao="metas-editar">editar</button></div>
     ${barra('Academia', g, ma, 'g')}${barra('Corrida', c, mc, 'c')}
     <div class="hm-dias" aria-hidden="true">${dias}</div><p class="cs hm-nota">${nota}</p></section>`;
 }
@@ -527,7 +525,48 @@ function cardsRodape(){
   if(!a && !b) return '';
   return `<div class="hm-dupla${a && b ? '' : ' um'}">${a}${b}</div>`;
 }
+
+let bvEscolha = 'pronto';        // primeiro acesso: pronto | gerar | zero
+let metasEditando = false;       // metas da semana abertas para editar na home
+function telaBoasVindas(){
+  const op = (k, t, d) => `<button type="button" class="bv-op${bvEscolha === k ? ' on' : ''}" data-bv="${k}" aria-pressed="${bvEscolha === k}"><span class="bv-dot" aria-hidden="true"></span><span><b>${t}</b><small>${d}</small></span></button>`;
+  const p = PLANO_PADRAO; const focos = p.rotacao.map(k => p.treinos[k].foco.toLowerCase()).join(', ');
+  return cab('<span class="hm-verde">Primeiro acesso</span>', 'Vamos montar<br>teu treino') +
+    `<p class="cs bv-sub">Leva 1 minuto. Tudo fica salvo neste aparelho.</p>
+    <p class="rot bv-q">Como você quer começar?</p>
+    <div class="bv-ops" role="group" aria-label="Como começar">
+      ${op('pronto', 'Plano pronto · ' + p.rotacao.join(''), `${focos}. Dá pra editar depois.`)}
+      ${op('gerar', 'Gerar pelo meu objetivo', 'Responde 3 perguntas rápidas e o app monta o plano.')}
+      ${op('zero', 'Montar do zero', 'Escolhe os exercícios na biblioteca.')}
+    </div>
+    <button type="button" class="btn" data-acao="bv-continuar">Continuar</button>
+    <p class="cs bv-conta">Já usa em outro aparelho? <button type="button" class="lnk lnk-mini hm-verde" data-acao="bv-entrar">Entrar na conta</button></p>`;
+}
+function guiaPrimeiro(){
+  if(db.sessoes.length) return '';
+  return `<section class="card hm-guia"><p class="rot">Na primeira vez</p>
+    <div class="hm-passo agora"><span>1</span><div><b>Anote a carga de cada série</b><small>na próxima, o app sugere a carga</small></div></div>
+    <div class="hm-passo"><span>2</span><div><b>Toque em Concluir no fim</b><small>o treino vai pro Histórico</small></div></div></section>`;
+}
+function metasInline(){
+  const m = db.metas;
+  const linha = (k, nome, cls) => `<div class="hm-step"><span class="hm-bola ${cls}" aria-hidden="true"></span><span class="hm-sn">${nome}</span>
+    <button type="button" class="hm-sb" data-meta="${k}" data-delta="-1" aria-label="Menos ${nome.toLowerCase()}"${m[k] ? '' : ' disabled'}>−</button>
+    <b aria-live="polite">${m[k]}×</b>
+    <button type="button" class="hm-sb" data-meta="${k}" data-delta="1" aria-label="Mais ${nome.toLowerCase()}"${m[k] >= 7 ? ' disabled' : ''}>+</button></div>`;
+  return `<section class="card hm-metas hm-edit" aria-label="Metas da semana"><div class="hm-topo"><p class="rot">Metas da semana</p>${metasEditando ? '<button type="button" class="lnk lnk-mini" data-acao="metas-pronto">Pronto</button>' : ''}</div>
+    <p class="cs hm-nota" style="margin:4px 0 2px">Quantas vezes por semana você quer ir?</p>
+    ${linha('academia', 'Academia', 'g')}${linha('corrida', 'Corrida', 'c')}
+    <p class="cs hm-nota">${metasEditando ? `Zero = sem meta. <button type="button" class="lnk lnk-mini" data-acao="metas">Mais metas (km, cargas)</button>` : `Dá pra mudar quando quiser. <button type="button" class="lnk lnk-mini" data-acao="ocultar-convite">Agora não</button>`}</p></section>`;
+}
+function avisoInstalar(){
+  if(!db.sessoes.length || ehApp() || db.vistoInstalar || !matchMedia('(pointer: coarse)').matches) return '';
+  return `<section class="card hm-alerta hm-inst"><p class="rot">Guarde seus treinos</p><p class="hm-mt">Instale na tela de início</p>
+    <p class="cs">No navegador, o celular pode apagar dados de sites pouco usados. Instalado, isso não acontece.</p>
+    <div class="hm-inst-b"><button type="button" class="mini-btn" data-acao="como-instalar">Mostrar como</button><button type="button" class="lnk lnk-mini" data-acao="fechar-instalar">Depois</button></div></section>`;
+}
 function telaHome(){
+  if(!db.configurado) return telaBoasVindas();
   const rot = rotacao();
   const and = emAndamento();
   const topo = bannerSalvo() + lembreteBackup();
@@ -552,9 +591,10 @@ function telaHome(){
       `<button type="button" class="hm-chip${retroAberto ? ' on' : ''}" data-acao="${retroAberto ? 'retro-fechar' : 'retro-abrir'}" aria-expanded="${retroAberto}">Outro dia</button>`;
     if(outroDia){ rotulo = 'Outro dia'; titulo = `Lançar treino<br>de ${fmtDia(retroData)}`; }
     else if(feitoHoje){ rotulo = saudacao(); titulo = 'Treino de hoje<br>feito ✓'; }
+    else if(!db.sessoes.length){ rotulo = '<span class="hm-verde">Tudo pronto</span>'; titulo = `Primeiro treino:<br>Treino ${esc(prox)}`; }
     else { rotulo = saudacao(); titulo = `Hoje é dia<br>de Treino ${esc(prox)}`; }
     const q = quandoFoi(prox);
-    principal = `<section class="card hm-prox"><p class="rot hm-verde">${feitoHoje && !outroDia ? 'Próximo, amanhã' : 'Próximo na rotação'}</p>
+    principal = `<section class="card hm-prox"><p class="rot hm-verde">${feitoHoje && !outroDia ? 'Próximo, amanhã' : db.sessoes.length ? 'Próximo na rotação' : 'Começa pelo começo'}</p>
       <p class="hm-t">Treino ${esc(prox)}${tr.foco ? ' · ' + esc(tr.foco) : ''}</p>
       <p class="cs">${tr.ex.length} exercícios · ${seriesPrevistas(prox)} séries${q !== 'nunca' ? ' · último ' + esc(prox) + ' ' + q : ''}</p>
       <button type="button" class="btn${feitoHoje && !outroDia ? ' sec-btn' : ''}" data-tipo="${prox}" data-home="1">${outroDia ? 'Lançar' : 'Começar'} Treino ${esc(prox)}</button>
@@ -564,7 +604,7 @@ function telaHome(){
         <p class="cs" style="margin-top:6px">${outroDia ? `Toque no treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p></div>` : ''}
     </section>`;
   }
-  return topo + cab(rotulo, titulo, '', calendario(outroDia ? dataDeISO(retroData) : new Date())) + principal + cardMetas() + cardsRodape() + folhaInstalar();
+  return topo + cab(rotulo, titulo, '', calendario(outroDia ? dataDeISO(retroData) : new Date())) + principal + guiaPrimeiro() + cardMetas() + avisoInstalar() + cardsRodape();
 }
 
 function telaHoje(){
@@ -588,13 +628,13 @@ function telaHoje(){
           <div class="acoes"><button type="button" class="lnk" data-acao="retro-fechar">Voltar para hoje</button></div></div>`
       : `<div class="acoes" style="margin-top:12px"><button type="button" class="lnk" data-acao="retro-abrir">Esqueceu de registrar? Lançar treino de outro dia</button></div>`;
     return topo + cab(outroDia ? 'Outro dia' : 'Hoje', 'Qual treino?', '', calendario(outroDia ? dataDeISO(retroData) : new Date())) +
-      `<div class="sec"><span>${outroDia ? 'Escolha o do dia ' + fmtDia(retroData) : 'Escolha o de hoje'}</span><span>${esc(plano().nome)}</span></div><div class="escolhas">${opcoes}</div>` + retroBox + folhaInstalar();
+      `<div class="sec"><span>${outroDia ? 'Escolha o do dia ' + fmtDia(retroData) : 'Escolha o de hoje'}</span><span>${esc(plano().nome)}</span></div><div class="escolhas">${opcoes}</div>` + retroBox;
   }
   const seg = keys.map(k =>
     `<button type="button" role="tab" aria-selected="${k === t}" data-tipo="${k}" class="${k === t ? 'on' : ''}">${k === 'corrida' ? 'Corrida' : k}</button>`
   ).join('');
   return topo + `<div class="seg n${keys.length}" role="tablist" aria-label="Treino">${seg}</div>` +
-    (t === 'corrida' ? telaCorrida() : telaTreino(t)) + folhaInstalar();
+    (t === 'corrida' ? telaCorrida() : telaTreino(t));
 }
 
 function rascKey(t){ return db.planoAtivo + ':' + t; }
@@ -666,6 +706,26 @@ function resultadosHoje(t, q){
 const normTxt = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 let buscaTxt = '';
 const ICON_LUPA = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
+/* erro de digitação: até 1 letra trocada, faltando, sobrando ou invertida (2 em termos de 9+ letras),
+   comparando com a palavra inteira ou com o começo dela ("agachameto" acha Agachamento) */
+function distOSA(a, b){
+  const m = a.length, n = b.length; if(Math.abs(m - n) > 2) return 9;
+  const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for(let j = 1; j <= n; j++) d[0][j] = j;
+  for(let i = 1; i <= m; i++) for(let j = 1; j <= n; j++){
+    const c = a[i - 1] === b[j - 1] ? 0 : 1;
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+    if(i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[m][n];
+}
+function quase(t, w){
+  if(w.length < 3) return false;
+  const lim = t.length >= 9 ? 2 : 1;
+  if(distOSA(t, w) <= lim) return true;
+  for(let L = t.length - 1; L <= t.length + 1; L++) if(L >= 3 && L < w.length && distOSA(t, w.slice(0, L)) <= lim) return true;
+  return false;
+}
 function buscarBib(q, excluir = []){
   const termos = normTxt(q).split(/\s+/).filter(Boolean);
   if(!termos.length) return [];
@@ -677,6 +737,7 @@ function buscarBib(q, excluir = []){
       if(grupo.startsWith(t)) s += 3;
       else if(palavras.some(w => w.startsWith(t))) s += 2;
       else if(nome.includes(t) || grupo.includes(t)) s += 1;
+      else if(t.length >= 4 && [...palavras, ...grupo.split(/[^a-z0-9]+/)].some(w => quase(t, w))) s += 0.5;
       else return 0;
     }
     return s;
@@ -1398,7 +1459,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v34 · nov/2026';
+const VERSAO = 'v35 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1535,7 +1596,8 @@ function salvarEditor(){
     })};
   });
   db.planos[id] = { id, nome, rotacao: rot, treinos };
-  db.planoAtivo = id; limparEscolha(); ed = null; aba = 'plano';
+  const eraPrimeiro = !db.configurado; db.configurado = true;
+  db.planoAtivo = id; limparEscolha(); ed = null; aba = eraPrimeiro ? 'inicio' : 'plano';
   save(); render(); window.scrollTo(0, 0); toast('Plano salvo e ativado');
 }
 
@@ -1765,6 +1827,7 @@ document.querySelector('.tema').addEventListener('click', e => {
 document.querySelector('nav.menu').addEventListener('click', e => {
   const b = e.target.closest('button[data-aba]'); if(!b) return;
   if((aba === 'editor') && !confirm('Sair do editor sem salvar?')) return;
+  metasEditando = false;
   aba = b.dataset.aba; ed = null; me = null; trocando = null; fichaAberta = null; edReg = null; render(); window.scrollTo(0, 0);
 });
 
@@ -1823,7 +1886,7 @@ $('#app').addEventListener('input', e => {
 
 $('#app').addEventListener('change', e => {
   const el = e.target;
-  if(el.id === 'plano-ativo'){ db.planoAtivo = el.value; limparEscolha(); save(); render(); toast('Plano ativado'); return; }
+  if(el.id === 'plano-ativo'){ db.planoAtivo = el.value; db.configurado = true; limparEscolha(); save(); render(); toast('Plano ativado'); return; }
   if(el.id === 'dash-ex'){ dashEx = el.value; render(); return; }
   if(el.dataset.retro){ retroData = el.value > diaISO() ? diaISO() : el.value; render(); return; }
   if(el.dataset.mf && me){ me.form[el.dataset.mf] = el.value; return; }
@@ -1863,6 +1926,11 @@ $('#app').addEventListener('click', e => {
   const el = e.target.closest('button'); if(!el || el.disabled) return;
   if(el.dataset.ficha){ fichaAberta = el.dataset.ficha; render(); return; }
   if(el.dataset.acao === 'fechar-ficha'){ fichaAberta = null; render(); return; }
+  if(el.dataset.bv){ bvEscolha = el.dataset.bv; render(); return; }
+  if(el.dataset.meta){
+    const k = el.dataset.meta; db.metas[k] = Math.max(0, Math.min(7, (db.metas[k] || 0) + Number(el.dataset.delta)));
+    metasEditando = true; save(); render(); document.querySelector(`[data-meta="${k}"][data-delta="${el.dataset.delta}"]`)?.focus(); return;
+  }
   if(el.dataset.tipo){
     const continuar = el.dataset.home && emAndamento() && emAndamento().t === el.dataset.tipo;
     const novo = !continuar && (el.classList.contains('escolha') || el.dataset.home);
@@ -2031,7 +2099,15 @@ $('#app').addEventListener('click', e => {
   }
   if(acao === 'er-salvar' && edReg){ salvarRegistro(); return; }
   if(acao === 'er-cancelar'){ edReg = null; render(); return; }
-  if(acao === 'retro-abrir'){ retroAberto = true; const o = new Date(); o.setDate(o.getDate() - 1); retroData = diaISO(o); render(); setTimeout(() => $('#retro-data')?.focus(), 0); return; }
+  if(acao === 'bv-continuar'){
+    if(bvEscolha === 'pronto'){ db.configurado = true; save(); render(); window.scrollTo(0, 0); toast('Plano pronto. Bom treino!'); return; }
+    if(bvEscolha === 'gerar'){ aba = 'gerador'; render(); window.scrollTo(0, 0); return; }
+    abrirEditor(null); render(); window.scrollTo(0, 0); return;
+  }
+  if(acao === 'bv-entrar'){ aba = 'plano'; planoSecao = 'ajustes'; render(); window.scrollTo(0, 0); setTimeout(() => { const b = document.querySelector('[data-nuvem="abrir"]'); if(b){ b.click(); setTimeout(() => document.getElementById('nuvem-box')?.scrollIntoView({ block: 'start' }), 50); } }, 0); return; }
+  if(acao === 'metas-editar'){ metasEditando = true; render(); return; }
+  if(acao === 'metas-pronto'){ metasEditando = false; render(); return; }
+  if(acao === 'retro-abrir'){ retroAberto = true; retroData = ''; render(); setTimeout(() => $('#retro-data')?.focus(), 0); return; }
   if(acao === 'retro-fechar'){ retroAberto = false; retroData = ''; render(); return; }
   if(acao === 'analise'){ analiseAberta = !analiseAberta; render(); return; }
   if(acao === 'add-plano'){ addPlano = !addPlano; render(); return; }

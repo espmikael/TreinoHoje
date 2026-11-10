@@ -636,3 +636,33 @@ body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area
 .hm-mini .cs{margin:0}
 .hm-alerta{border-left:4px solid var(--aviso)}
 .hm-alerta .rot{color:var(--aviso)}
+
+/* ===== rodada 16 · primeiro acesso, metas na home, aviso de instalar ===== */
+.bv-sub{margin:12px 0 18px;font-size:15px}
+.bv-q{margin:0 0 8px;color:var(--muted)}
+.bv-ops{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.bv-op{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}
+.bv-op b{display:block;font-size:16px;font-weight:700}
+.bv-op small{display:block;margin-top:2px;font-size:13px;color:var(--muted);line-height:1.35}
+.bv-dot{flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;border:2px solid var(--rule)}
+.bv-op.on{border-color:var(--brand);background:var(--brand-soft)}
+.bv-op.on .bv-dot{border-color:var(--brand);background:var(--brand);box-shadow:inset 0 0 0 3px var(--brand-soft)}
+.bv-conta{text-align:center;margin-top:12px}
+.hm-guia .rot{margin:0 0 10px;color:var(--muted)}
+.hm-passo{display:flex;gap:10px;align-items:flex-start;margin-top:10px;color:var(--muted)}
+.hm-passo span{flex:none;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);text-align:center;line-height:22px;font-size:13px;font-weight:700}
+.hm-passo b{display:block;font-size:15px}
+.hm-passo small{display:block;font-size:13px}
+.hm-passo.agora{color:var(--ink)}
+.hm-passo.agora span{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.hm-passo.agora small{color:var(--muted)}
+.hm-edit{border-left:4px solid var(--brand)}
+.hm-step{display:flex;align-items:center;gap:10px;margin-top:10px}
+.hm-bola{width:10px;height:10px;border-radius:50%;background:var(--brand)}
+.hm-bola.c{background:var(--corrida)}
+.hm-sn{flex:1;font-size:15px;font-weight:600}
+.hm-sb{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--ink);font-size:20px;font-weight:600}
+.hm-sb:disabled{color:var(--muted);opacity:.5}
+.hm-step b{width:44px;text-align:center;font-size:20px;font-weight:800}
+.hm-inst .cs{margin:0}
+.hm-inst-b{display:flex;gap:12px;align-items:center;margin-top:10px}
