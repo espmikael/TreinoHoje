@@ -41,7 +41,7 @@ Instalado, ele abre em tela cheia, funciona offline e mantém a tela acesa duran
 
 Tudo fica salvo primeiro **no seu aparelho** (armazenamento do navegador), e o app funciona sem conta e sem internet.
 
-**Sincronizar (opcional):** em Plano → Ajustes dá pra entrar com e-mail e senha (ou criar uma conta). Aí os registros, planos e metas ganham backup na nuvem e aparecem também no PC. O treino em andamento e as escolhas do dia ficam só no aparelho. Sem internet, o app guarda tudo e sincroniza quando a conexão volta. Os dados ficam na tabela `treinohoje`, protegida para que cada conta só leia e grave a própria linha. Não há rastreamento nem anúncios.
+**Sincronizar (opcional):** em Plano → Ajustes dá pra criar uma conta ou entrar com e-mail e senha (tem "Esqueci a senha"; os links dos e-mails abrem o próprio app). Aí os registros, planos e metas ganham backup na nuvem e aparecem também no PC. O treino em andamento e as escolhas do dia ficam só no aparelho. Sem internet, o app guarda tudo e sincroniza quando a conexão volta. Os dados ficam na tabela `treinohoje`, protegida para que cada conta só leia e grave a própria linha. Não há rastreamento nem anúncios.
 
 Por isso, use **Plano → Ajustes → Exportar backup** de vez em quando, principalmente antes de trocar de celular. O app lembra você se o último backup tiver mais de 30 dias.
 
