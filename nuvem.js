@@ -45,19 +45,40 @@ async function nvToken(){
   if(r.status >= 400 && r.status < 500){ nvEstado = 'expirada'; return false; }
   throw new Error('rede');
 }
+/* entrar com e-mail e senha (a mesma conta do MyFinance); criar conta é opcional */
+let nvModo = 'entrar';
+const msgErro = r => ((r.corpo && (r.corpo.error_description || r.corpo.msg || r.corpo.message || r.corpo.error_code)) || '') + ' ' + r.status;
 async function nuvemEntrar(email, senha){
-  nvErro = '';
+  nvErro = ''; nvEmail = email;
   try{
     const r = await nvReq('/auth/v1/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email, password: senha }) }, false);
     if(!r.ok){
-      const m = (r.corpo && (r.corpo.error_description || r.corpo.msg || r.corpo.error_code)) || '';
-      nvErro = /invalid|credentials/i.test(m) ? 'E-mail ou senha incorretos.' : /confirm/i.test(m) ? 'Confirme o e-mail da conta antes de entrar.' : 'Não deu pra entrar agora. Tente de novo em instantes.';
+      const m = msgErro(r);
+      nvErro = /not.?confirmed/i.test(m) ? 'Confirme o e-mail da conta (pelo link que chegou) e depois entre aqui.'
+        : /invalid|credentials/i.test(m) ? 'E-mail ou senha incorretos.'
+        : /429|rate/i.test(m) ? 'Muitas tentativas. Espere um pouco.' : 'Não deu pra entrar agora. Tente de novo em instantes.';
       render(); return;
     }
     nvGuardarSessao(r.corpo); nv.sinc = 0; nv.nuvemEm = null; nvSalvar();
-    nvForm = false; nvEstado = 'enviando'; render();
+    nvForm = false; nvModo = 'entrar'; nvEstado = 'enviando'; render();
     await sincronizar(true);
     toast('Conectado: seus treinos agora têm backup na nuvem');
+  }catch(e){ nvErro = 'Sem conexão com a nuvem agora. Tente de novo mais tarde.'; render(); }
+}
+async function nuvemCriar(email, senha){
+  nvErro = ''; nvEmail = email;
+  if(senha.length < 6){ nvErro = 'Use uma senha com pelo menos 6 caracteres.'; render(); return; }
+  try{
+    const r = await nvReq('/auth/v1/signup', { method: 'POST', body: JSON.stringify({ email, password: senha }) }, false);
+    if(!r.ok){
+      const m = msgErro(r);
+      nvErro = /already|registered|exists/i.test(m) ? 'Esse e-mail já tem conta. Use "Entrar".'
+        : /429|rate/i.test(m) ? 'Muitas tentativas. Espere um pouco.' : 'Não deu pra criar a conta agora. Tente de novo em instantes.';
+      render(); return;
+    }
+    if(r.corpo && r.corpo.access_token){ await nuvemEntrar(email, senha); return; }
+    nvModo = 'entrar'; nvErro = ''; render();
+    toast('Conta criada. Confirme pelo link no seu e-mail e depois entre aqui.');
   }catch(e){ nvErro = 'Sem conexão com a nuvem agora. Tente de novo mais tarde.'; render(); }
 }
 function nuvemSair(){
@@ -139,14 +160,16 @@ window.blocoNuvem = function(){
   if(!nvLogado() && nvEstado !== 'expirada'){
     return `<div id="nuvem-box"><div class="sec"><span>Sincronizar</span><span>opcional</span></div>
       <div class="card txt">
-        <p class="cs">Entre com sua conta para ter backup automático na nuvem e ver seus treinos também no PC. Sem conta, tudo continua funcionando só neste aparelho.</p>
-        ${nvForm ? `<form class="nuvem-form" data-nuvem-form autocomplete="on">
+        <p class="cs">Entre com sua conta (a mesma do MyFinance) para ter backup automático na nuvem e ver seus treinos também no PC. Sem entrar, tudo continua funcionando só neste aparelho.</p>
+        ${!nvForm ? '' : `<form class="nuvem-form" data-nuvem-form="${nvModo}">
             <label class="nv-campo"><span>E-mail</span><input class="inp" type="email" name="email" autocomplete="username" inputmode="email" value="${esc(nvEmail)}" required></label>
-            <label class="nv-campo"><span>Senha</span><input class="inp" type="password" name="senha" autocomplete="current-password" required></label>
+            <label class="nv-campo"><span>Senha${nvModo === 'criar' ? ' (mínimo 6 caracteres)' : ''}</span><input class="inp" type="password" name="senha" autocomplete="${nvModo === 'criar' ? 'new-password' : 'current-password'}" required></label>
             ${nvErro ? `<p class="nv-erro" role="alert">${esc(nvErro)}</p>` : ''}
-            <div class="acoes" style="align-items:center;gap:16px"><button type="submit" class="mini-btn">Entrar</button><button type="button" class="lnk" data-nuvem="cancelar">Cancelar</button></div>
-          </form>`
-          : `<div class="acoes"><button type="button" class="mini-btn" data-nuvem="abrir">Entrar</button></div>`}
+            <div class="acoes" style="align-items:center;gap:16px"><button type="submit" class="mini-btn">${nvModo === 'criar' ? 'Criar conta' : 'Entrar'}</button>
+              <button type="button" class="lnk" data-nuvem="cancelar">Cancelar</button></div>
+            <p class="cs" style="margin:0">${nvModo === 'criar' ? 'Já tem conta? <button type="button" class="lnk lnk-mini" data-nuvem="modo-entrar">Entrar</button>' : 'Não tem conta? <button type="button" class="lnk lnk-mini" data-nuvem="modo-criar">Criar conta</button>'}</p>
+          </form>`}
+        ${nvForm ? '' : `<div class="acoes"><button type="button" class="mini-btn" data-nuvem="abrir">Entrar</button></div>`}
       </div></div>`;
   }
   const st = { ok: ['st-ok', '✓ sincronizado'], enviando: ['', 'sincronizando…'], offline: ['', 'sem internet'], erro: ['st-alerta', 'nuvem indisponível'], expirada: ['st-alerta', 'entre de novo'] }[nvEstado] || ['', ''];
@@ -168,18 +191,19 @@ document.getElementById('app').addEventListener('click', e => {
   const b = e.target.closest('[data-nuvem]'); if(!b) return;
   const a = b.dataset.nuvem;
   if(a === 'abrir'){ nvForm = true; nvErro = ''; render(); setTimeout(() => document.querySelector('[data-nuvem-form] input')?.focus(), 0); }
-  if(a === 'cancelar'){ nvForm = false; nvErro = ''; render(); }
+  if(a === 'cancelar'){ nvForm = false; nvErro = ''; nvModo = 'entrar'; render(); }
+  if(a === 'modo-criar' || a === 'modo-entrar'){ const f = document.querySelector('[data-nuvem-form]'); if(f) nvEmail = f.email.value.trim(); nvModo = a === 'modo-criar' ? 'criar' : 'entrar'; nvErro = ''; render(); }
   if(a === 'agora') sincronizar(true);
   if(a === 'sair') nuvemSair();
-  if(a === 'reentrar'){ nv = { mod: nv.mod, sinc: nv.sinc, nuvemEm: nv.nuvemEm }; nvSalvar(); nvEstado = 'fora'; nvForm = true; render(); }
+  if(a === 'reentrar'){ nvEmail = (nv.sessao && nv.sessao.email) || nvEmail; nv = { mod: nv.mod, sinc: nv.sinc, nuvemEm: nv.nuvemEm }; nvSalvar(); nvEstado = 'fora'; nvForm = true; nvModo = 'entrar'; render(); }
 });
 document.getElementById('app').addEventListener('submit', e => {
   const f = e.target.closest('[data-nuvem-form]'); if(!f) return;
   e.preventDefault();
-  const email = f.email.value.trim(), senha = f.senha.value; nvEmail = email;
+  const email = f.email.value.trim(), senha = f.senha.value;
   if(!email || !senha) return;
   f.querySelector('[type=submit]').disabled = true;
-  nuvemEntrar(email, senha);
+  if(f.dataset.nuvemForm === 'criar') nuvemCriar(email, senha); else nuvemEntrar(email, senha);
 });
 window.addEventListener('online', () => sincronizar());
 document.addEventListener('visibilitychange', () => {
