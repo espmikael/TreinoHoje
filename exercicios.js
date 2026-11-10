@@ -129,6 +129,45 @@ const BIB = [
 const BIB_ID = Object.fromEntries(BIB.map(e => [e.id, e]));
 const ehCardio = id => BIB_ID[id]?.g === 'cardio';
 
+/* padrão de movimento de cada exercício: "m" = movimento, "v" = variação dentro dele.
+   Usado para sugerir trocas: primeiro o mesmo movimento, depois o resto do grupo. */
+const MOV = {};
+[
+  ['supino', 'reto', 'supino-reto supino-reto-halteres supino-maquina supino-declinado flexao'],
+  ['supino', 'inclinado', 'supino-inclinado supino-inclinado-barra flexao-inclinada'],
+  ['crucifixo', '', 'voador crucifixo-halteres crossover crossover-baixo crucifixo-inclinado'],
+  ['puxada', '', 'barra-fixa puxada-alta puxada-neutra barra-supinada puxada-supinada'],
+  ['remada', '', 'remada remada-maquina remada-maquina-neutra remada-baixa remada-cavalinho remada-invertida'],
+  ['pullover', '', 'pullover-polia pullover-halter'],
+  ['encolhimento', '', 'encolhimento encolhimento-barra'],
+  ['desenvolvimento', '', 'desenvolvimento desenvolvimento-maquina desenvolvimento-barra desenvolvimento-arnold'],
+  ['elevacao', 'lateral', 'elevacao-lateral elevacao-lateral-polia elevacao-lateral-maquina'],
+  ['elevacao', 'frontal', 'elevacao-frontal'],
+  ['posterior-ombro', '', 'crucifixo-inverso face-pull crucifixo-inverso-maquina'],
+  ['rosca', 'livre', 'rosca-direta rosca-alternada rosca-inclinada rosca-polia-reta rosca-polia-w'],
+  ['rosca', 'apoiada', 'rosca-scott rosca-scott-halter rosca-concentrada'],
+  ['rosca', 'martelo', 'rosca-martelo rosca-martelo-corda'],
+  ['extensao-triceps', 'baixo', 'triceps-pulley triceps-pulley-barra triceps-coice'],
+  ['extensao-triceps', 'acima', 'triceps-frances triceps-testa triceps-overhead-polia'],
+  ['empurrar-triceps', '', 'mergulho triceps-banco supino-fechado flexao-diamante'],
+  ['agachamento', '', 'agachamento leg-press hack-smith agachamento-goblet agachamento-sumo agachamento-frontal'],
+  ['unilateral', '', 'bulgaro afundo passada step-up afundo-reverso'],
+  ['extensora', '', 'extensora'],
+  ['quadril', '', 'stiff stiff-unilateral terra terra-romeno hiperextensao'],
+  ['flexora', '', 'flexora flexora-sentada'],
+  ['ponte', '', 'elevacao-pelvica elevacao-pelvica-maquina ponte-gluteo'],
+  ['abducao', '', 'abdutora gluteo-polia'],
+  ['adutora', '', 'adutora'],
+  ['panturrilha', '', 'panturrilha panturrilha-sentado panturrilha-leg-press panturrilha-unilateral'],
+  ['abdominal', 'supra', 'abdominal abdominal-maquina abdominal-carga'],
+  ['abdominal', 'infra', 'elevacao-pernas abdominal-infra crunch-reverso elevacao-pernas-paralela abdominal-canivete'],
+  ['abdominal', 'obliquo', 'abdominal-bicicleta abdominal-obliquo giro-russo'],
+  ['estabilidade', '', 'prancha prancha-lateral pallof dead-bug canoa roda-abdominal'],
+  ['lombar', '', 'superman'],
+  ['punho', '', 'rosca-punho-polia rosca-punho-halter rosca-punho-invertida rosca-inversa-polia'],
+  ['cardio', '', 'bike esteira eliptico escada remo-ergometro pular-corda'],
+].forEach(([m, v, ids]) => ids.split(' ').forEach(id => { MOV[id] = { m, v }; }));
+
 /* =========================================================
    FICHAS — ilustrações próprias, músculos e execução
    ========================================================= */

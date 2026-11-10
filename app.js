@@ -706,10 +706,24 @@ function setsDe(rd, e){
   return sets;
 }
 const completo = sets => sets.length && sets.every(s => s.reps !== '');
+/* trocas sugeridas: mesmo movimento primeiro (remada por remada), depois o resto do grupo.
+   Dentro disso: outro equipamento antes (o aparelho pode estar ocupado) e o que já foi feito antes. */
 function alternativas(e, lista){
-  const g = (BIB_ID[e.orig] || BIB_ID[e.id] || {}).g;
-  if(!g) return [];
-  return BIB.filter(b => b.g === g && b.id !== e.id && b.id !== e.orig && !lista.some(x => x.id === b.id)).slice(0, 6);
+  const ref = BIB_ID[e.orig] || BIB_ID[e.id]; if(!ref) return [];
+  const mv = MOV[ref.id] || {};
+  const usados = {};
+  db.sessoes.forEach(s => Object.keys(s.ex || {}).forEach(id => { usados[id] = (usados[id] || 0) + 1; }));
+  const nota = b => {
+    const m = MOV[b.id] || {};
+    let n = 0;
+    if(mv.m && m.m === mv.m) n += 100;
+    if(mv.m && m.m === mv.m && m.v === mv.v) n += 20;
+    if(b.eq !== ref.eq) n += 5;
+    if(usados[b.id]) n += Math.min(usados[b.id], 3);
+    return n;
+  };
+  return BIB.filter(b => b.g === ref.g && b.id !== e.id && b.id !== e.orig && !lista.some(x => x.id === b.id))
+    .map((b, i) => ({ b, n: nota(b), i })).sort((x, y) => y.n - x.n || x.i - y.i).slice(0, 6).map(x => x.b);
 }
 
 function telaTreino(t){
@@ -1384,7 +1398,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v33 · nov/2026';
+const VERSAO = 'v34 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
