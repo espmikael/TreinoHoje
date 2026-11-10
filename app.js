@@ -58,7 +58,7 @@ function load(){
   }
   return d;
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} if(window.nuvemMudou) nuvemMudou(); }
 let db = load();
 
 /* estado da interface */
@@ -390,6 +390,7 @@ async function prepararImagem(id){
 }
 function lembreteBackup(){
   if(db.sessoes.length < 3) return '';
+  if(window.nuvemOk && nuvemOk()) return '';     // a nuvem já faz o backup
   if(db.backupAdiadoAte && Date.now() < new Date(db.backupAdiadoAte)) return '';
   const ref = db.ultimoBackup || db.sessoes[0].data;
   const dias = diasDesde(ref);
@@ -1163,7 +1164,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v27 · nov/2026';
+const VERSAO = 'v28 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1182,11 +1183,12 @@ function telaPlano(){
       <div><div class="sec"><span>Metas</span></div>
         <div class="card"><div class="st-linha"><div><p class="m-nome">${resumoMetas}</p><p class="cs">Frequência semanal, carga e corrida. Tudo opcional.</p></div>
           <button type="button" class="mini-btn" data-acao="metas">${temAlgumaMeta() ? 'Editar' : 'Definir'}</button></div></div></div>
+      ${window.blocoNuvem ? blocoNuvem() : ''}
       <div><div class="sec"><span>Seus dados</span></div>
         <div class="card txt">
           <div class="backup-st"><span>Proteção contra limpeza</span><span class="${db.persistido || ehApp() ? 'st-ok' : ''}">${db.persistido ? '✓ ativa' : (ehApp() ? '✓ app instalado' : 'comum')}</span></div>
           <div class="backup-st"><span>Último backup</span><span class="${db.ultimoBackup && diasDesde(db.ultimoBackup) < 30 ? 'st-ok' : 'st-alerta'}">${backup}</span></div>
-          <p class="cs">Seus registros ficam só neste aparelho. Se o navegador apagar os dados do site, eles somem, então exporte um backup de vez em quando. No iPhone, Exportar abre o menu de compartilhar: salve em Arquivos ou no Drive.</p>
+          <p class="cs">${window.nuvemOk && nuvemOk() ? 'Com a conta conectada, a nuvem já guarda uma cópia. O arquivo de backup é uma segunda garantia.' : 'Sem conta conectada, seus registros ficam só neste aparelho. Se o navegador apagar os dados do site, eles somem, então exporte um backup de vez em quando. No iPhone, Exportar abre o menu de compartilhar: salve em Arquivos ou no Drive.'}</p>
           <div class="acoes" style="align-items:center;gap:16px">
             <button type="button" class="mini-btn" data-acao="exportar">Exportar backup</button>
             <button type="button" class="lnk" data-acao="importar">Importar</button>
@@ -1720,7 +1722,7 @@ $('#app').addEventListener('click', e => {
   if(el.dataset.ersens && edReg){ edReg.corrida.sens = edReg.corrida.sens === el.dataset.ersens ? '' : el.dataset.ersens; render(); return; }
   if(el.dataset.erserie && edReg){ const l = edReg.ex[el.dataset.erserie]; const u = l[l.length - 1] || { kg: '', reps: '' }; l.push({ kg: u.kg, reps: '' }); render(); return; }
   if(el.dataset.del){
-    if(confirm('Excluir este registro?')){ db.sessoes = db.sessoes.filter(s => String(s.id) !== el.dataset.del); if(String(ultimaSalva) === el.dataset.del) ultimaSalva = null; save(); render(); }
+    if(confirm('Excluir este registro?')){ db.sessoes = db.sessoes.filter(s => String(s.id) !== el.dataset.del); (db.apagados = db.apagados || []).push(el.dataset.del); if(String(ultimaSalva) === el.dataset.del) ultimaSalva = null; save(); render(); }
     return;
   }
   if(el.dataset.ed && ed){

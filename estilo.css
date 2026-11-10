@@ -514,3 +514,10 @@ body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area
 .pose.fig .pzc{fill:var(--bg)}
 .pose.fig .pz-l{stroke:var(--muted)}
 .pose.fig .cabo{stroke:var(--muted);stroke-width:1.5}
+
+/* ---------- rodada 13: sincronizar ---------- */
+.nuvem-form{display:grid;gap:10px;margin-top:12px}
+.nv-campo{display:grid;gap:4px}
+.nv-campo span{font-size:13px;font-weight:600;color:var(--muted)}
+.nv-campo .inp{width:100%;box-sizing:border-box}
+.nv-erro{margin:0;font-size:13px;color:var(--action-text)}

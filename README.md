@@ -39,7 +39,9 @@ Instalado, ele abre em tela cheia, funciona offline e mantém a tela acesa duran
 
 ## Privacidade e dados
 
-Tudo fica salvo **só no seu aparelho** (armazenamento do navegador). Não há conta, servidor, rastreamento nem arquivos de terceiros.
+Tudo fica salvo primeiro **no seu aparelho** (armazenamento do navegador), e o app funciona sem conta e sem internet.
+
+**Sincronizar (opcional):** em Plano → Ajustes dá pra entrar com uma conta do Supabase. Aí os registros, planos e metas ganham backup na nuvem e aparecem também no PC. O treino em andamento e as escolhas do dia ficam só no aparelho. Sem internet, o app guarda tudo e sincroniza quando a conexão volta. Os dados ficam na tabela `treinohoje`, protegida para que cada conta só leia e grave a própria linha. Não há rastreamento nem anúncios.
 
 Por isso, use **Plano → Ajustes → Exportar backup** de vez em quando, principalmente antes de trocar de celular. O app lembra você se o último backup tiver mais de 30 dias.
 
@@ -47,6 +49,7 @@ Por isso, use **Plano → Ajustes → Exportar backup** de vez em quando, princi
 
 ```
 index.html          estrutura da página
+nuvem.js            sincronização opcional com o Supabase
 estilo.css          visual (cores, tipografia, layout)
 app.js              lógica do app
 exercicios.js       biblioteca de exercícios, fichas e ilustrações
