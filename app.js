@@ -731,7 +731,7 @@ function buscarBib(q, excluir = []){
   if(!termos.length) return [];
   /* ordem: início do grupo muscular > início de palavra no nome > pedaço no meio de uma palavra ("ant" acha Antebraço antes de Panturrilha) */
   const pontos = b => {
-    const nome = normTxt(b.nome), grupo = normTxt(GRUPOS[b.g] || ''), palavras = nome.split(/[^a-z0-9]+/);
+    const nome = normTxt(b.nome + ' ' + (APELIDOS[b.id] || '')), grupo = normTxt(GRUPOS[b.g] || ''), palavras = nome.split(/[^a-z0-9]+/);
     let s = 0;
     for(const t of termos){
       if(grupo.startsWith(t)) s += 3;
@@ -1459,7 +1459,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v36 · nov/2026';
+const VERSAO = 'v37 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();

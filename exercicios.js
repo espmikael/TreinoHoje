@@ -50,7 +50,7 @@ const BIB = [
   ['crossover', 'Crossover na polia', 'peito', 'i', 'm', 12, 15],
   ['remada-cavalinho', 'Remada cavalinho (barra T)', 'costas', 'c', 'b', 8, 12],
   ['puxada-neutra', 'Puxada com pegada neutra', 'costas', 'c', 'm', 8, 12],
-  ['pullover-polia', 'Pullover na polia', 'costas', 'i', 'm', 12, 15],
+  ['pullover-polia', 'Pulldown / pullover na polia', 'costas', 'i', 'm', 12, 15],
   ['encolhimento', 'Encolhimento (halteres)', 'costas', 'i', 'b', 10, 15],
   ['desenvolvimento-barra', 'Desenvolvimento com barra (em pé)', 'ombro', 'c', 'b', 8, 12],
   ['rosca-inclinada', 'Rosca inclinada (halteres)', 'biceps', 'i', 'b', 10, 15],
@@ -128,6 +128,26 @@ const BIB = [
 ].map(([id, nome, g, k, eq, a, b]) => ({ id, nome, g, k, eq, r: [a, b] }));
 const BIB_ID = Object.fromEntries(BIB.map(e => [e.id, e]));
 const ehCardio = id => BIB_ID[id]?.g === 'cardio';
+
+/* outros nomes que a busca entende (não aparecem na tela) */
+const APELIDOS = {
+  'pullover-polia': 'pull down braço estendido straight arm',
+  'puxada-alta': 'pulley frente puxador lat',
+  'remada-baixa': 'remada sentada polia seated row',
+  'voador': 'peitoral fly pec crucifixo máquina',
+  'supino-maquina': 'chest press',
+  'extensora': 'cadeira extensora leg extension',
+  'flexora': 'mesa flexora leg curl',
+  'flexora-sentada': 'cadeira flexora',
+  'abdutora': 'cadeira abdutora',
+  'adutora': 'cadeira adutora',
+  'elevacao-pelvica': 'hip thrust',
+  'desenvolvimento-maquina': 'shoulder press',
+  'remada-cavalinho': 't bar barra t',
+  'terra': 'deadlift levantamento',
+  'crossover': 'cross over',
+  'face-pull': 'face pull',
+};
 
 /* padrão de movimento de cada exercício: "m" = movimento, "v" = variação dentro dele.
    Usado para sugerir trocas: primeiro o mesmo movimento, depois o resto do grupo. */
