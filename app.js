@@ -469,13 +469,21 @@ function emAndamento(){
   return { t, feitas, total, exFeitos, nEx: lista.length, atual, min: Math.round((Date.now() - (rd.criado || Date.now())) / 6e4) };
 }
 /* próximo treino da rotação, depois do último feito neste plano */
+/* sugestão do dia: o treino do plano que está há mais tempo sem ser feito.
+   Assim, se a semana teve B e A, sugere C (e não B só porque vem depois de A).
+   Treino nunca feito vem primeiro; empate fica na ordem da rotação, a partir do último feito. */
 function proximoRot(){
-  const rot = rotacao(), p = plano();
-  for(let i = db.sessoes.length - 1; i >= 0; i--){
-    const s = db.sessoes[i];
-    if(s.tipo !== 'corrida' && doPlano(s, p) && rot.includes(s.tipo)) return rot[(rot.indexOf(s.tipo) + 1) % rot.length];
-  }
-  return rot[0];
+  const rot = rotacao(), p = plano(), ult = {};
+  let ultimo = null, ultData = 0;
+  db.sessoes.forEach(s => {
+    if(s.tipo === 'corrida' || !rot.includes(s.tipo) || !doPlano(s, p)) return;
+    const t = new Date(s.data).getTime();
+    if(!(ult[s.tipo] >= t)) ult[s.tipo] = t;
+    if(t >= ultData){ ultData = t; ultimo = s.tipo; }
+  });
+  if(!ultimo) return rot[0];
+  const ordem = rot.map((_, i) => rot[(rot.indexOf(ultimo) + 1 + i) % rot.length]);
+  return ordem.reduce((m, k) => ((ult[k] || 0) < (ult[m] || 0) ? k : m), ordem[0]);
 }
 function seriesPrevistas(t){ return plano().treinos[t].ex.reduce((a, e) => a + e.series, 0); }
 function saudacao(){ const h = new Date().getHours(); return h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; }
@@ -594,7 +602,7 @@ function telaHome(){
     else if(!db.sessoes.length){ rotulo = '<span class="hm-verde">Tudo pronto</span>'; titulo = `Primeiro treino:<br>Treino ${esc(prox)}`; }
     else { rotulo = saudacao(); titulo = `Hoje é dia<br>de Treino ${esc(prox)}`; }
     const q = quandoFoi(prox);
-    principal = `<section class="card hm-prox"><p class="rot hm-verde">${feitoHoje && !outroDia ? 'Próximo, amanhã' : db.sessoes.length ? 'Próximo na rotação' : 'Começa pelo começo'}</p>
+    principal = `<section class="card hm-prox"><p class="rot hm-verde">${feitoHoje && !outroDia ? 'Próximo, amanhã' : db.sessoes.length ? 'Há mais tempo sem fazer' : 'Começa pelo começo'}</p>
       <p class="hm-t">Treino ${esc(prox)}${tr.foco ? ' · ' + esc(tr.foco) : ''}</p>
       <p class="cs">${tr.ex.length} exercícios · ${seriesPrevistas(prox)} séries${q !== 'nunca' ? ' · último ' + esc(prox) + ' ' + q : ''}</p>
       <button type="button" class="btn${feitoHoje && !outroDia ? ' sec-btn' : ''}" data-tipo="${prox}" data-home="1">${outroDia ? 'Lançar' : 'Começar'} Treino ${esc(prox)}</button>
@@ -1459,7 +1467,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v37 · nov/2026';
+const VERSAO = 'v39 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
