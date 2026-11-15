@@ -1294,7 +1294,7 @@ function salvarRegistro(){
 }
 
 /* ---------- histórico: resumo (destaques, músculos, consistência) + exercícios com detalhe ---------- */
-let histPer = 'p8', histEx = null, histModo = 'forca';
+let histPer = 'p8', histEx = null, histModo = 'forca', histMus = null;
 const PERIODOS = { p4: ['4 semanas', 28], p8: ['8 semanas', 56], p3m: ['3 meses', 91], tudo: ['Tudo', Infinity] };
 const DIA = 864e5;
 function pontosEx(id, modo, desde){
@@ -1358,14 +1358,30 @@ function painelHist(){
   const destHtml = dest.length ? `<div class="hp-dest">${dest.map(([c, t, x, s, id]) => `<button type="button" class="card hp-d ${c}" data-hex="${id}"><span class="rot">${t}</span><b>${x}</b><span class="cs">${s}</span></button>`).join('')}</div>`
     : `<div class="card hp-poucos"><p class="cs">Os destaques (maior evolução, o que está parado e os recordes) aparecem com algumas semanas de registros.</p></div>`;
   /* volume por músculo */
-  const vol = {};
+  const vol = {}, volEx = {};   // volEx[g][id] = { p: séries como principal, s: séries como secundário, t: treinos }
+  const somaVol = (g, id, n, sec) => {
+    vol[g] = (vol[g] || 0) + (sec ? n / 2 : n);
+    const o = ((volEx[g] = volEx[g] || {})[id] = volEx[g][id] || { p: 0, s: 0, t: 0 });
+    o[sec ? 's' : 'p'] += n; o.t++;
+  };
   noPer.forEach(s => Object.entries(s.ex || {}).forEach(([id, sets]) => {
     if(ehCardio(id)) return; const f = FICHAS[id], n = sets.length;
-    if(f){ f.p.forEach(g => vol[g] = (vol[g] || 0) + n); f.s.forEach(g => vol[g] = (vol[g] || 0) + n / 2); }
-    else if(BIB_ID[id]) vol[BIB_ID[id].g] = (vol[BIB_ID[id].g] || 0) + n;
+    if(f){ f.p.forEach(g => somaVol(g, id, n, false)); f.s.forEach(g => somaVol(g, id, n, true)); }
+    else if(BIB_ID[id]) somaVol(BIB_ID[id].g, id, n, false);
   }));
   const vl = Object.entries(vol).map(([g, n]) => [g, n / semanas]).sort((a, b) => b[1] - a[1]);
-  const volHtml = vl.length ? vl.map(([g, n]) => { const ok = n >= 10 && n <= 20; return `<div class="hp-vl"><span>${GRUPOS[g] || g}</span><div class="hp-bar"><i class="faixa"></i><i class="v ${ok ? 'ok' : 'aviso'}" style="width:${Math.min(100, n / 22 * 100).toFixed(0)}%"></i></div><b class="${ok ? 'ok' : 'aviso'}">${fmtNum(Math.round(n * 10) / 10)}</b></div>`; }).join('') + `<p class="cs hp-nota">Séries por semana · a faixa tracejada é 10–20, o que a ciência indica para crescer (secundários contam ½)</p>`
+  const r1 = n => fmtNum(Math.round(n * 10) / 10);
+  const volDet = g => {
+    const its = Object.entries(volEx[g] || {}).map(([id, o]) => ({ id, ...o, c: (o.p + o.s / 2) / semanas })).sort((a, b) => b.c - a.c);
+    return `<div class="hp-vd" id="hp-vd-${g}">${its.map(x => {
+      const papel = x.p && x.s ? 'principal e secundário' : x.p ? 'principal' : 'secundário · conta ½';
+      const nome = `<b>${esc(nomeEx(x.id))}</b><small>${x.p + x.s} ${plural(x.p + x.s, 'série', 'séries')} em ${x.t} ${plural(x.t, 'treino', 'treinos')} · ${papel}</small>`;
+      return `<div class="hp-vd-l">${ids.includes(x.id) ? `<button type="button" class="hp-vd-n" data-hex="${x.id}">${nome}</button>` : `<span class="hp-vd-n">${nome}</span>`}<span class="hp-vd-v">${r1(x.c)}<small>/sem</small></span></div>`;
+    }).join('')}</div>`;
+  };
+  const volHtml = vl.length ? vl.map(([g, n]) => { const ok = n >= 10 && n <= 20, ab = histMus === g;
+      return `<button type="button" class="hp-vl ${ab ? 'on' : ''}" data-hmus="${g}" aria-expanded="${ab}" aria-controls="hp-vd-${g}"><span>${GRUPOS[g] || g}</span><span class="hp-bar"><i class="faixa"></i><i class="v ${ok ? 'ok' : 'aviso'}" style="width:${Math.min(100, n / 22 * 100).toFixed(0)}%"></i></span><b class="${ok ? 'ok' : 'aviso'}">${r1(n)}</b></button>${ab ? volDet(g) : ''}`; }).join('')
+      + `<p class="cs hp-nota">Séries por semana · a faixa tracejada é 10–20, o que a ciência indica para crescer (secundários contam ½). Toque num músculo para ver de onde vêm as séries.</p>`
     : '<p class="cs">Registre treinos de musculação para ver o volume por músculo.</p>';
   /* consistência: 12 semanas */
   const ini12 = segunda(agora); ini12.setDate(ini12.getDate() - 7 * 11);
@@ -2026,6 +2042,7 @@ $('#app').addEventListener('click', e => {
   if(el.dataset.modo){ dashModo = el.dataset.modo; render(); return; }
   if(el.dataset.hper){ histPer = el.dataset.hper; render(); return; }
   if(el.dataset.hmodo){ histModo = el.dataset.hmodo; render(); return; }
+  if(el.dataset.hmus){ histMus = histMus === el.dataset.hmus ? null : el.dataset.hmus; render(); return; }
   if(el.dataset.hex){ histEx = el.dataset.hex; render(); if(matchMedia('(max-width: 899px)').matches) setTimeout(() => document.querySelector('.hp-det')?.scrollIntoView({ block: 'start' }), 0); else document.querySelector('.hp-det')?.scrollIntoView({ block: 'nearest' }); return; }
   if(el.dataset.hvoltar){ histEx = null; render(); setTimeout(() => document.querySelector('.hp-lista')?.scrollIntoView({ block: 'start' }), 0); return; }
   if(el.dataset.so){ soInstalar = el.dataset.so; render(); return; }

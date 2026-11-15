@@ -536,13 +536,23 @@ body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area
 .hp-duo{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
 .hp-vl{display:grid;grid-template-columns:96px 1fr 40px;align-items:center;gap:10px;margin:8px 0;font-size:14px}
 .hp-vl b{text-align:right;font-size:13px}
-.hp-bar{position:relative;height:10px;border-radius:5px;background:var(--field)}
+.hp-bar{display:block;position:relative;height:10px;border-radius:5px;background:var(--field)}
 .hp-bar .faixa{position:absolute;left:45.45%;width:45.45%;top:-3px;bottom:-3px;border:1px dashed var(--rule);border-radius:4px}
 .hp-bar .v{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
 .hp-bar .v.ok,.hp-ex .sobe,.hp-big .ok{background:none}
 .hp-bar .v.ok{background:var(--brand)} .hp-bar .v.aviso{background:var(--aviso)}
 .hp-vl b.ok{color:var(--brand)} .hp-vl b.aviso{color:var(--aviso)}
 .hp-nota{margin-top:8px}
+button.hp-vl{padding:4px 6px;margin:4px -6px;width:calc(100% + 12px);border:0;border-radius:8px;background:transparent;color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+button.hp-vl:hover,button.hp-vl.on{background:var(--field)}
+button.hp-vl.on .hp-bar{background:var(--bg)}
+.hp-vd{margin:2px 0 10px;padding:4px 0 4px 12px;border-left:2px solid var(--rule)}
+.hp-vd-l{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0}
+.hp-vd-n{display:block;min-width:0;padding:0;border:0;background:none;color:var(--ink);font:inherit;text-align:left}
+button.hp-vd-n{cursor:pointer} button.hp-vd-n b{text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
+.hp-vd-n b{display:block;font-size:14px;font-weight:600;line-height:1.25}
+.hp-vd-n small{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.hp-vd-v{flex:none;font-size:14px;font-weight:700} .hp-vd-v small{font-size:11px;font-weight:500;color:var(--muted);margin-left:2px}
 .hp-cal{display:flex;gap:4px;margin-top:12px;overflow-x:auto}
 .hp-cal div{display:grid;gap:4px}
 .hp-cal i{display:block;width:clamp(14px,4.2vw,22px);aspect-ratio:1;border-radius:4px;background:var(--field)}
