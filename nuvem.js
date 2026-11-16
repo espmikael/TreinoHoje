@@ -25,6 +25,7 @@ window.nuvemMudou = function(){
   clearTimeout(nvTimer); nvTimer = setTimeout(sincronizar, 2500);
 };
 /* com a nuvem em dia, o lembrete de backup manual some */
+window.nuvemIcone = () => !nvLogado() ? 'sem' : !navigator.onLine || nvEstado === 'offline' ? 'off' : nvEstado === 'enviando' ? 'env' : (nvEstado === 'erro' || nvEstado === 'expirada') ? 'erro' : 'ok';
 window.nuvemOk = () => nvLogado() && nv.sinc && Date.now() - nv.sinc < 7 * 864e5;
 
 async function nvReq(caminho, opc = {}, comToken = true){
@@ -156,6 +157,7 @@ async function sincronizar(forcar){
   }finally{ nvRodando = false; nvAtualizarTela(); }
 }
 function nvAtualizarTela(){
+  if(window.atualizarNuvemIcone) atualizarNuvemIcone();
   const box = document.getElementById('nuvem-box');
   if(box && !box.contains(document.activeElement)) box.outerHTML = blocoNuvem();
 }
@@ -266,4 +268,5 @@ document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'hidden' && nvTimer){ clearTimeout(nvTimer); nvTimer = null; sincronizar(); }   // fechou o app logo depois de mexer
   if(document.visibilityState === 'visible' && Date.now() - (nv.sinc || 0) > 60e3) sincronizar();
 });
-if(nvLogado()) setTimeout(sincronizar, 800);
+/* o app desenha a primeira tela antes deste arquivo carregar: redesenha já sabendo se há conta */
+if(nvLogado()){ render(); setTimeout(sincronizar, 800); } else if(window.atualizarNuvemIcone) atualizarNuvemIcone();

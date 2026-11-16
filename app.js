@@ -95,7 +95,7 @@ function doPlano(s, p){ return (s.planoId || 'padrao') === p.id; }
 function ultimo(exId){
   for(let i = db.sessoes.length - 1; i >= 0; i--){
     const s = db.sessoes[i];
-    if(s.ex && s.ex[exId] && s.ex[exId].length) return { data: s.data, sets: s.ex[exId], nota: s.notas && s.notas[exId] || '' };
+    if(s.ex && s.ex[exId] && s.ex[exId].length) return { data: s.data, sets: s.ex[exId] };
   }
   return null;
 }
@@ -116,27 +116,6 @@ function pace(km, min){
   if(s === 60){ m++; s = 0; }
   return `${m}:${String(s).padStart(2, '0')}`;
 }
-/* recordes de um registro: exercícios em que a melhor série (força estimada) passou de tudo que veio antes.
-   A primeira vez num exercício não conta como recorde. */
-function recordesDe(s){
-  if(!s || !s.ex) return [];
-  const t = new Date(s.data), out = [];
-  for(const [id, sets] of Object.entries(s.ex)){
-    if(ehCardio(id)) continue;
-    let m = null;
-    sets.forEach(z => { const kg = num(z.kg) || 0, r = num(z.reps) || 0; if(kg && (!m || forcaEst(kg, r) > m.f)) m = { kg, r, f: forcaEst(kg, r) }; });
-    if(!m) continue;
-    let antes = 0, teve = false;
-    db.sessoes.forEach(o => {
-      if(o === s || !o.ex || !o.ex[id] || new Date(o.data) >= t) return;
-      o.ex[id].forEach(z => { const kg = num(z.kg) || 0; if(kg){ teve = true; antes = Math.max(antes, forcaEst(kg, num(z.reps) || 0)); } });
-    });
-    if(teve && m.f > antes + 0.01) out.push({ id, kg: m.kg, r: m.r, ganho: m.f - antes });
-  }
-  return out.sort((a, b) => b.ganho - a.ganho);
-}
-const recTxt = x => `${esc(nomeEx(x.id))} · ${fmtNum(x.kg)} kg × ${x.r}`;
-const durTxt = m => m >= 60 ? `${Math.floor(m / 60)} h ${pad2(m % 60)}` : `${m} min`;
 function melhorSerie(sets){
   let best = null;
   for(const s of sets){
@@ -194,63 +173,6 @@ function melhorCarga(exId){
 const metaTxt = (v, m) => m ? `${v}/${m}` : `${v}`;
 const plural = (n, um, varios) => n === 1 ? um : varios;
 
-function blocoMetas(){
-  const m = db.metas;
-  if(!temAlgumaMeta()) return '';
-  const hoje = new Date();
-  const ini = segunda(hoje);
-  const restam = 7 - (hoje.getDay() + 6) % 7;
-  const cards = [];
-  if(temMetaSemanal()){
-    const { g, c } = contaSemana(ini);
-    const mA = metaAcad(ini), leve = m.leveSemanas.includes(isoSemana(ini));
-    const linha = (nome, feito, meta) => {
-      const n = Math.max(meta, feito);
-      const segs = Array.from({ length: n }, (_, i) => `<i class="${i < feito ? 'on' : ''}"></i>`).join('');
-      return `<div class="m-linha"><div class="m-top"><span class="m-nome">${nome}</span><span class="m-num">${feito}<small> / ${meta}</small></span></div>
-        <div class="segs" style="grid-template-columns:repeat(${n},minmax(0,1fr))" role="img" aria-label="${nome}: ${feito} de ${meta}">${segs}</div></div>`;
-    };
-    const faltaG = Math.max(0, mA - g), faltaC = Math.max(0, m.corrida - c);
-    let frase;
-    if(!faltaG && !faltaC) frase = 'Meta da semana batida.';
-    else {
-      const partes = [];
-      if(faltaG) partes.push(`${faltaG} ${plural(faltaG, 'treino', 'treinos')}`);
-      if(faltaC) partes.push(`${faltaC} ${plural(faltaC, 'corrida', 'corridas')}`);
-      frase = `${plural(faltaG + faltaC, 'Falta', 'Faltam')} ${partes.join(' e ')}.`;
-    }
-    cards.push(`<section class="card m-card">
-      ${m.academia ? linha('Academia', g, mA) : ''}
-      ${m.corrida ? linha('Corrida', c, m.corrida) : ''}
-      <p class="m-frase">${frase}${leve ? ' <span class="tag-leve">semana leve</span>' : ''}</p></section>`);
-    const seq = sequencia();
-    let quadros = '';
-    for(let w = 7; w >= 0; w--){ const d = new Date(ini); d.setDate(d.getDate() - 7 * w); quadros += `<i class="${semanaNaMeta(d) ? 'on' : ''}"></i>`; }
-    cards.push(`<section class="card"><div class="card-head"><span class="t">Sequência</span><span class="t-brand">semanas na meta</span></div>
-      <div class="seq"><div class="seq-n">${seq}<small> ${plural(seq, 'semana', 'semanas')}</small></div>
-      <div class="quadros" role="img" aria-label="Últimas 8 semanas">${quadros}</div></div></section>`);
-  }
-  m.cargas.forEach(cg => {
-    const atual = melhorCarga(cg.exId);
-    const span = cg.kg - cg.inicio;
-    const pct = span <= 0 ? (atual >= cg.kg ? 100 : 0) : Math.max(0, Math.min(100, (atual - cg.inicio) / span * 100));
-    const falta = Math.max(0, cg.kg - atual);
-    const prazo = cg.prazo ? 'até ' + cg.prazo.split('-').reverse().slice(0, 2).join('/') : 'sem prazo';
-    cards.push(`<section class="card"><div class="card-head"><span class="t">Meta de carga</span><span class="t">${prazo}</span></div>
-      <div class="m-top"><span class="m-nome">${esc(cg.nome)}</span><span class="m-kg">${fmtNum(atual)} <span>→ ${fmtNum(cg.kg)} kg</span></span></div>
-      <div class="prog"><i style="width:${pct}%"></i></div>
-      <p class="m-frase">${falta ? `${cg.inicio ? `Partiu de ${fmtNum(cg.inicio)} kg · ` : ''}faltam ${fmtNum(falta)} kg` : 'Meta batida.'}</p></section>`);
-  });
-  if(m.kmMes){
-    const ref = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    const km = db.sessoes.filter(s => s.tipo === 'corrida' && new Date(s.data) >= ref).reduce((a, s) => a + (num(s.corrida?.km) || 0), 0);
-    cards.push(`<section class="card"><div class="card-head"><span class="t">Corrida no mês</span><span class="m-kg">${fmtNum(km)} <span>/ ${m.kmMes} km</span></span></div>
-      <div class="prog"><i style="width:${Math.min(100, km / m.kmMes * 100)}%"></i></div></section>`);
-  }
-  return `<div class="sec"><span>${temMetaSemanal() ? 'Metas da semana' : 'Metas'}</span><span>${temMetaSemanal() ? (restam === 1 ? 'último dia' : `${restam} dias restantes`) : ''}</span></div>
-    <div class="metas-grid">${cards.join('')}</div>
-    <div class="acoes" style="margin:0 0 4px"><button type="button" class="lnk" data-acao="metas">Editar metas</button></div>`;
-}
 
 /* ---------- tela de configurar metas ---------- */
 let me = null;
@@ -357,7 +279,6 @@ const abertos = new Set();      // exercícios completos reabertos para editar
 let trocando = null;            // exercício com o painel "trocar" aberto
 let recemFechado = null;        // anima só o cartão que acabou de encolher
 let recemMarcado = null;        // anima só o ✓ que acabou de ser tocado
-let notaAberta = null;          // exercício com o campo de nota aberto
 let soInstalar = /iphone|ipad|ipod/i.test(navigator.userAgent) ? 'ios' : 'android';
 
 function bannerSalvo(){
@@ -370,10 +291,33 @@ function bannerSalvo(){
     <button type="button" class="mini-btn" data-share="${s.id}" aria-label="Compartilhar">${IC.share}<span class="so-largo">Compartilhar</span></button>
     <button type="button" class="x-btn" data-acao="fechar-banner" aria-label="Fechar">${IC.x}</button></div>`;
 }
+/* o que mudou em cada exercício em relação à vez anterior */
+function mudancasDe(s){
+  const antes = db.sessoes.filter(x => x.id !== s.id && x.ex && new Date(x.data) < new Date(s.data));
+  const forca = l => Math.max(0, ...l.map(z => forcaEst(num(z.kg) || 0, num(z.reps) || 0)));
+  const maxKg = l => Math.max(0, ...l.map(z => num(z.kg) || 0));
+  const reps = l => l.reduce((a, z) => a + (num(z.reps) || 0), 0);
+  const out = [];
+  for(const [id, sets] of Object.entries(s.ex || {})){
+    if(ehCardio(id) || !sets.length) continue;
+    const ant = antes.filter(x => x.ex[id] && x.ex[id].length);
+    if(!ant.length){ out.push({ id, k: 'novo' }); continue; }
+    const ult = ant[ant.length - 1].ex[id];
+    const rec = forca(sets) > 0 && forca(sets) > Math.max(...ant.map(x => forca(x.ex[id]))) + 1e-6;
+    const dk = Math.round((maxKg(sets) - maxKg(ult)) * 100) / 100, dr = reps(sets) - reps(ult);
+    const txt = sets.map(z => serieTxt(id, z)).join(' · ');
+    if(dk > 0) out.push({ id, k: 'sobe', rec, tag: '+' + fmtNum(dk) + ' kg', det: `${fmtNum(maxKg(ult))} → ${fmtNum(maxKg(sets))} kg` });
+    else if(dk === 0 && dr > 0) out.push({ id, k: 'sobe', rec, tag: `+${dr} ${plural(dr, 'rep', 'reps')}`, det: txt });
+    else if(rec) out.push({ id, k: 'sobe', rec, tag: 'recorde', det: txt, soRec: true });
+    else out.push({ id, k: dk === 0 && dr === 0 ? 'igual' : 'cai' });
+  }
+  return out;
+}
+let concAnim = false;            // treino completo recém-concluído: anima o ✓ uma vez
 function folhaConcluido(id){
   const s = db.sessoes.find(x => x.id === id); if(!s) return '';
   const ts = tituloSessao(s); const corrida = s.tipo === 'corrida';
-  let linha;
+  let linha, corpo = '';
   if(corrida){
     const c = s.corrida || {}; const pc = pace(num(c.km), num(c.min));
     linha = [c.km ? fmtNum(num(c.km)) + ' km' : '', c.min ? fmtNum(num(c.min)) + ' min' : '', pc ? pc + ' /km' : ''].filter(Boolean).join(' · ');
@@ -382,26 +326,34 @@ function folhaConcluido(id){
     const prev = s.previsto ? Object.values(s.previsto).reduce((a, p) => a + p.series, 0) : 0;
     const vol = sets.reduce((a, z) => a + (num(z.kg) || 0) * (num(z.reps) || 0), 0);
     const nEx = Object.keys(s.ex || {}).length;
-    linha = [`${nEx} ${plural(nEx, 'exercício', 'exercícios')}`, `${prev ? sets.length + '/' + prev : sets.length} séries`, vol ? fmtMil(vol) + ' kg' : '', s.dur ? durTxt(s.dur) : ''].filter(Boolean).join(' · ');
+    linha = [`${nEx} ${plural(nEx, 'exercício', 'exercícios')}`, `${prev ? sets.length + '/' + prev : sets.length} séries`, vol ? fmtMil(vol) + ' kg' : ''].filter(Boolean).join(' · ');
+    const mud = mudancasDe(s);
+    const conta = k => mud.filter(m => m.k === k).length;
+    const sobe = mud.filter(m => m.k === 'sobe').sort((a, b) => (b.rec ? 1 : 0) - (a.rec ? 1 : 0));
+    if(mud.some(m => m.k !== 'novo')){
+      const recs = mud.filter(m => m.rec).length;
+      const resto = [conta('igual') ? `${conta('igual')} ${plural(conta('igual'), 'igual', 'iguais')} à última vez` : '', conta('cai') ? `${conta('cai')} abaixo da última vez` : '', conta('novo') ? `${conta('novo')} ${plural(conta('novo'), 'novo', 'novos')}` : ''].filter(Boolean).join(' · ');
+      corpo = `<div class="cc-nums"><div><b class="ok">${sobe.length}</b><span>${plural(sobe.length, 'subiu', 'subiram')}</span></div><div><b class="rec">${recs}</b><span>${plural(recs, 'recorde', 'recordes')}</span></div><div><b>${conta('igual')}</b><span>${plural(conta('igual'), 'igual', 'iguais')}</span></div></div>
+        ${sobe.length ? `<p class="rot cc-rot">O que mudou desde a última</p>${sobe.slice(0, 5).map(m => `<div class="cc-l"><div><b>${esc(nomeEx(m.id))}</b><small>${m.det}</small></div>
+          <span class="cc-tags">${m.rec && !m.soRec ? '<em class="rec">recorde</em>' : ''}<em class="${m.soRec ? 'rec' : 'ok'}">${m.tag}</em></span></div>`).join('')}` : ''}
+        ${resto ? `<p class="cs cc-resto">${sobe.length > 5 ? `Mais ${sobe.length - 5} subiram · ` : ''}${resto}.</p>` : ''}`;
+    }
   }
-  const recs = corrida ? [] : recordesDe(s);
-  const recHtml = recs.length ? `<div class="conc-rec"><p class="rot">${recs.length === 1 ? 'Novo recorde' : recs.length + ' novos recordes'}</p>
-    ${recs.slice(0, 3).map(x => `<p>${recTxt(x)}</p>`).join('')}${recs.length > 3 ? `<p class="cs">e mais ${recs.length - 3}</p>` : ''}</div>` : '';
   const pode = db.desfazer && db.desfazer.id === s.id && Date.now() - db.desfazer.em < 5 * 60e3;
   const pronta = imgCache && imgCache.id === s.id;
+  const anim = concAnim; concAnim = false;
+  const selo = `<div class="cc-selo${anim ? ' anim' : ''}" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21"/><path d="M15 24.5l6.5 6.5L34 18"/></svg>${anim ? Array.from({ length: 8 }, (_, i) => `<i style="--a:${i * 45}deg"></i>`).join('') : ''}</div>`;
   return `<div class="folha-fundo" data-fundo="concluido"><section class="folha concluido" role="dialog" aria-modal="true" aria-labelledby="conc-tit">
     <div class="folha-alca" aria-hidden="true"></div>
-    <p class="rot">${corrida ? 'Corrida concluída' : 'Treino concluído'}</p>
-    <h2 id="conc-tit">${esc(ts.nome)}${corrida ? '' : ' · ' + esc(ts.foco)}</h2>
-    <p class="cs" style="font-size:15px;margin-top:4px">${linha}</p>
-    ${recHtml}
-    <button type="button" class="conc-prev" data-acao="conc-share" aria-label="Compartilhar imagem do treino">
+    <div class="cc-topo">${selo}<div><p class="rot">${corrida ? 'Corrida concluída' : 'Treino concluído'}</p>
+      <h2 id="conc-tit">${esc(ts.nome)}${corrida ? '' : ' · ' + esc(ts.foco)}</h2></div></div>
+    <p class="cs" style="font-size:15px;margin-top:6px">${linha}</p>
+    ${corpo || `<button type="button" class="conc-prev" data-acao="conc-share" aria-label="Compartilhar imagem do treino">
       ${pronta ? `<img src="${imgCache.url}" alt="">` : '<span class="conc-carregando">Gerando imagem…</span>'}
-    </button>
-    <button type="button" class="btn conc-btn" data-acao="conc-share">${IC.share}Compartilhar</button>
-    <div class="acoes" style="justify-content:space-between;margin-top:4px">
-      ${pode ? '<button type="button" class="lnk" data-acao="desfazer">Desfazer</button>' : '<span></span>'}
-      <button type="button" class="lnk" data-acao="conc-fechar">Fechar</button></div>
+    </button>`}
+    <div class="cc-botoes"><button type="button" class="btn sec-btn" data-acao="conc-share">${IC.share}Compartilhar</button>
+      <button type="button" class="btn cc-fechar" data-acao="conc-fechar">Fechar</button></div>
+    ${pode ? '<div class="acoes" style="justify-content:center;margin-top:2px"><button type="button" class="lnk" data-acao="desfazer">Desfazer</button></div>' : ''}
   </section></div>`;
 }
 async function prepararImagem(id){
@@ -420,34 +372,13 @@ function lembreteBackup(){
   if(db.sessoes.length < 3) return '';
   if(window.nuvemOk && nuvemOk()) return '';     // a nuvem já faz o backup
   if(db.backupAdiadoAte && Date.now() < new Date(db.backupAdiadoAte)) return '';
-  const ref = db.ultimoBackup || db.sessoes[0].data;
-  const dias = diasDesde(ref);
-  if(dias < 30) return '';
-  const txt = db.ultimoBackup ? `Último backup há ${dias} dias` : 'Você ainda não fez backup';
-  return `<section class="lembrete" role="status"><div><p class="ct">${txt}</p><p class="cs">Leva 2 segundos e protege seus registros.</p></div>
-    <button type="button" class="mini-btn" data-acao="exportar">Exportar</button>
-    <button type="button" class="x-btn" data-acao="adiar-backup" aria-label="Lembrar depois">${IC.x}</button></section>`;
-}
-function metasLinha(){
-  const m = db.metas;
-  if(!temAlgumaMeta()){
-    if(m.ocultarConvite) return '';
-    return `<section class="convite"><div><p class="ct">Sem metas por enquanto</p><p class="cs">Quantas vezes por semana você quer treinar e correr?</p></div>
-      <button type="button" class="mini-btn" data-acao="metas">Definir</button>
-      <button type="button" class="x-btn" data-acao="ocultar-convite" aria-label="Ocultar">${IC.x}</button></section>`;
-  }
-  let txt;
-  if(temMetaSemanal()){
-    const ini = segunda(new Date()); const { g, c } = contaSemana(ini);
-    const partes = [];
-    if(m.academia) partes.push(`academia ${g}/${metaAcad(ini)}`);
-    if(m.corrida) partes.push(`corrida ${c}/${m.corrida}`);
-    txt = `<b>Semana</b> · ${partes.join(' · ')}`;
-  } else {
-    const n = m.cargas.length + (m.kmMes ? 1 : 0);
-    txt = `<b>Metas</b> · ${n} em andamento`;
-  }
-  return `<button type="button" class="metas-linha" data-ir="semana"><span>${txt}</span><span class="ml-ver">ver metas →</span></button>`;
+  const logado = window.nuvemIcone && nuvemIcone() !== 'sem';
+  if(logado) return '';                           // tem conta: o ícone do topo mostra o estado
+  if(db.ultimoBackup && diasDesde(db.ultimoBackup) < 30) return '';
+  return `<section class="card hm-alerta hm-bkp" role="status"><div class="hm-topo"><p class="rot">Seus treinos estão só neste celular</p>
+      <button type="button" class="x-btn" data-acao="adiar-backup" aria-label="Lembrar depois">${IC.x}</button></div>
+    <p class="cs">Se o celular for trocado ou o navegador limpar os dados, o histórico vai junto.${db.ultimoBackup ? ` Último arquivo de backup há ${diasDesde(db.ultimoBackup)} dias.` : ''}</p>
+    <div class="hm-bkp-b"><button type="button" class="mini-btn" data-acao="bv-entrar">Criar conta</button><button type="button" class="mini-btn ghost" data-acao="exportar">Exportar arquivo</button></div></section>`;
 }
 let instalarAberto = false;   // aberto pelo botão "Como instalar" em Ajustes
 function folhaInstalar(forcar = false){
@@ -513,10 +444,10 @@ function proximoRot(){
 }
 function seriesPrevistas(t){ return plano().treinos[t].ex.reduce((a, e) => a + e.series, 0); }
 function saudacao(){ const h = new Date().getHours(); return h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; }
-function cardMetas(semConvite = false){
+function cardMetas(){
   const m = db.metas;
   if(metasEditando) return metasInline();
-  if(!temMetaSemanal()) return m.ocultarConvite || semConvite ? '' : metasInline();
+  if(!temMetaSemanal()) return m.ocultarConvite ? '' : metasInline();
   const ini = segunda(new Date()); const { g, c } = contaSemana(ini);
   const ma = metaAcad(ini), mc = m.corrida;
   const barra = (nome, f, tot, cls) => tot ? `<div class="hm-meta"><span class="hm-mn">${nome}</span><span class="hm-seg ${cls}" aria-hidden="true">${Array.from({ length: tot }, (_, i) => `<i class="${i < f ? 'on' : ''}"></i>`).join('')}</span><b>${Math.min(f, tot)}/${tot}</b></div>` : '';
@@ -526,7 +457,7 @@ function cardMetas(semConvite = false){
   const hoje = diaISO(); let dias = '';
   for(let i = 0; i < 7; i++){
     const d = new Date(ini); d.setDate(d.getDate() + i); const k = diaISO(d);
-    dias += `<span class="hm-dia${porDia[k] ? ' ' + porDia[k] : ''}${k === hoje ? ' hoje' : ''}"><small>${'STQQSSD'[i]}</small><i></i></span>`;
+    dias += `<span class="hm-dia${porDia[k] ? ' ' + porDia[k] : ''}${k === hoje ? ' hoje' : ''}"><i></i><small>${['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'][i]}</small></span>`;
   }
   const falta = Math.max(0, ma - g) + Math.max(0, mc - c);
   const idx = (new Date().getDay() + 6) % 7, restam = 7 - idx;
@@ -534,19 +465,6 @@ function cardMetas(semConvite = false){
   return `<section class="card hm-metas" aria-label="Metas da semana"><div class="hm-topo"><p class="rot">Metas da semana</p><button type="button" class="lnk lnk-mini" data-acao="metas-editar">editar</button></div>
     ${barra('Academia', g, ma, 'g')}${barra('Corrida', c, mc, 'c')}
     <div class="hm-dias" aria-hidden="true">${dias}</div><p class="cs hm-nota">${nota}</p></section>`;
-}
-/* recordes dos últimos 7 dias: o mais recente em destaque, os outros contados */
-function cardRecorde(){
-  const corte = Date.now() - 7 * DIA; const recs = [];
-  for(let i = db.sessoes.length - 1; i >= 0; i--){
-    const s = db.sessoes[i]; if(new Date(s.data) < corte) break;
-    if(s.tipo !== 'corrida') recordesDe(s).forEach(x => { if(!recs.some(y => y.id === x.id)) recs.push({ ...x, d: s.data }); });
-  }
-  if(!recs.length) return '';
-  const r = recs[0], dd = Math.round((dataDeISO(diaISO()) - dataDeISO(diaISO(new Date(r.d)))) / DIA);
-  return `<button type="button" class="card hm-rec" data-ir="historico" data-hex-ir="${r.id}">
-    <span class="rot">${recs.length === 1 ? 'Recorde da semana' : recs.length + ' recordes na semana'}</span>
-    <b>${recTxt(r)}</b><span class="cs">${dd === 0 ? 'hoje' : dd === 1 ? 'ontem' : 'há ' + dd + ' dias'}${recs.length > 1 ? ' · e mais ' + (recs.length - 1) : ''} · ver evolução →</span></button>`;
 }
 function cardsRodape(){
   const ult = db.sessoes[db.sessoes.length - 1];
@@ -616,9 +534,7 @@ function telaHome(){
   if(!db.configurado) return telaBoasVindas();
   const rot = rotacao();
   const and = emAndamento();
-  /* um aviso por vez, para o botão de começar continuar sendo o centro: instalar > backup > convite de metas */
-  const inst = avisoInstalar(), bkp = inst ? '' : lembreteBackup();
-  const topo = bannerSalvo() + bkp;
+  const topo = bannerSalvo();
   const outroDia = retroAberto && retroData && retroData !== diaISO();
   let rotulo, titulo, principal;
   if(and){
@@ -653,14 +569,14 @@ function telaHome(){
         <p class="cs" style="margin-top:6px">${outroDia ? `Toque no treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p></div>` : ''}
     </section>`;
   }
-  return topo + cab(rotulo, titulo, '', calendario(outroDia ? dataDeISO(retroData) : new Date())) + principal + guiaPrimeiro() + cardRecorde() + cardMetas(!!(inst || bkp)) + inst + cardsRodape();
+  return topo + cab(rotulo, titulo, '', calendario(outroDia ? dataDeISO(retroData) : new Date())) + principal + lembreteBackup() + guiaPrimeiro() + cardMetas() + avisoInstalar() + cardsRodape();
 }
 
 function telaHoje(){
   const rot = rotacao();
   const t = tipoAtual();
   const keys = [...rot, 'corrida'];
-  const topo = bannerSalvo() + lembreteBackup() + metasLinha();
+  const topo = bannerSalvo();
   if(!t){
     const opcoes = keys.map(k => {
       const foco = k === 'corrida' ? 'Cardio' : plano().treinos[k].foco;
@@ -697,12 +613,6 @@ function previstoDe(lista){
   lista.forEach(e => { p[e.id] = { series: e.series, ...(e.trocado ? { trocadoDe: e.orig } : {}), ...(e.avulso ? { soHoje: true } : {}) }; });
   return p;
 }
-/* notas do dia que vão para o registro: só de exercícios feitos e não vazias */
-function notasDe(rd, ex){
-  const n = {};
-  Object.entries(rd.notas || {}).forEach(([id, txt]) => { const v = String(txt || '').trim().slice(0, 120); if(v && ex[id]) n[id] = v; });
-  return Object.keys(n).length ? n : null;
-}
 function salvarEsquecidos(){
   let n = 0;
   for(const [rk, rd] of Object.entries(db.rascunhos)){
@@ -717,8 +627,7 @@ function salvarEsquecidos(){
     const i = rk.lastIndexOf(':'); const pid = rk.slice(0, i), t = rk.slice(i + 1);
     const tr = db.planos[pid]?.treinos?.[t];
     const previsto = tr ? previstoDe(montarDia(db.planos[pid], t, rd)) : null;
-    const notas = notasDe(rd, ex);
-    db.sessoes.push({ id: Date.now() + n, data: (rd.dataReg ? dataDeISO(rd.dataReg) : new Date(rd.editado || rd.criado)).toISOString(), tipo: t, planoId: pid, nome: 'Treino ' + t, foco: tr ? tr.foco : '', ex, ...(previsto ? { previsto } : {}), ...(notas ? { notas } : {}), auto: true });
+    db.sessoes.push({ id: Date.now() + n, data: (rd.dataReg ? dataDeISO(rd.dataReg) : new Date(rd.editado || rd.criado)).toISOString(), tipo: t, planoId: pid, nome: 'Treino ' + t, foco: tr ? tr.foco : '', ex, ...(previsto ? { previsto } : {}), auto: true });
     n++;
   }
   if(n){ ordenarSessoes(); save(); }
@@ -733,7 +642,6 @@ function rascunho(t){
   if(!rd.trocas) rd.trocas = {};
   if(!rd.extras) rd.extras = {};
   if(!rd.avulsos) rd.avulsos = [];
-  if(!rd.notas) rd.notas = {};
   if(!rd.criado) rd.criado = Date.now();
   return rd;
 }
@@ -873,12 +781,6 @@ function telaTreino(t){
       if(last.sets.length >= e.series && last.sets.every(s => (num(s.reps) ?? 0) >= e.reps[1]))
         hint = `<p class="hint">${IC.up}Topo da faixa: suba a carga</p>`;
     }
-    /* nota curta: a do dia vira campo; a da última vez aparece como texto até alguém tocar em "Nota" */
-    const notaHoje = rd.notas[e.id], notaAnt = last && last.nota;
-    const campoNota = notaAberta === e.id || (notaHoje != null && notaHoje !== '');
-    const notaHtml = campoNota
-      ? `<label class="nota-campo"><input data-nota="${e.id}" maxlength="120" value="${esc(notaHoje || '')}" placeholder="Ex.: banco na posição 3" aria-label="Nota sobre ${esc(e.nome)}" autocomplete="off" enterkeyhint="done"></label>`
-      : notaAnt ? `<p class="nota-ant"><b>Nota</b> ${esc(notaAnt)}</p>` : '';
     const alts = alternativas(e, lista);
     const painel = trocando === e.orig ? `<div class="troca"><p class="troca-t">Aparelho ocupado? Troque só hoje</p>
         <label class="busca">${ICON_LUPA}<input type="search" placeholder="Buscar pelo nome" data-busca="troca" data-orig="${e.orig}" value="${esc(buscaTxt)}" aria-label="Buscar exercício pelo nome" autocomplete="off"></label>
@@ -902,9 +804,8 @@ function telaTreino(t){
     return `<section class="card">
       <div class="ex-head"><div class="nome-i"><h2>${esc(e.nome)}</h2>${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}"><span>i</span></button>` : ''}</div><span class="ex-meta">${feitas}/${e.series} · ${cardio ? `${e.reps[0]}–${e.reps[1]} min` : `${e.base}${e.extra ? '+' + e.extra : ''} × ${e.reps[0]}–${e.reps[1]}`}</span></div>
       <div class="ex-sub"><p class="ultima">${ult}${e.obs ? ' · ' + esc(e.obs) : ''}</p>
-        <span class="ex-bts">${campoNota ? '' : `<button type="button" class="trocar" data-notaab="${e.id}">Nota</button>`}
-        ${e.avulso ? `<button type="button" class="trocar" data-tirar="${e.orig}" aria-label="Tirar ${esc(e.nome)} do treino de hoje">Tirar</button>` : `<button type="button" class="trocar" data-trocar="${e.orig}" aria-expanded="${trocando === e.orig}">${trocando === e.orig ? 'Fechar' : (e.trocado ? 'Trocado' : 'Trocar')}</button>`}</span></div>
-      ${notaHtml}
+        ${e.avulso ? `<button type="button" class="trocar" data-tirar="${e.orig}" aria-label="Tirar ${esc(e.nome)} do treino de hoje">Tirar</button>` : `<button type="button" class="trocar" data-trocar="${e.orig}" aria-expanded="${trocando === e.orig}">${trocando === e.orig ? 'Fechar' : (e.trocado ? 'Trocado' : 'Trocar')}</button>`}</div>
+      ${e.avulso ? '' : ''}
       ${e.trocado ? `<p class="troca-info">Trocado só hoje · no plano: ${esc(nomeEx(e.orig))} · <button type="button" class="lnk lnk-mini" data-fixar="${e.orig}">Salvar no plano</button></p>` : ''}
       ${hint}${painel}
       <div class="sets">${linhas}</div>
@@ -972,113 +873,12 @@ function telaCorrida(){
 /* =========================================================
    SEMANA / MÊS
    ========================================================= */
-function telaSemana(){
-  const toggle = `<div class="toggle" role="group" aria-label="Visão">
-    <button type="button" data-visao="semana" class="${visao === 'semana' ? 'on' : ''}" aria-pressed="${visao === 'semana'}">Semana</button>
-    <button type="button" data-visao="mes" class="${visao === 'mes' ? 'on' : ''}" aria-pressed="${visao === 'mes'}">Mês</button></div>`;
-  return cab(temMetaSemanal() ? `Meta: ${[db.metas.academia ? db.metas.academia + '× academia' : '', db.metas.corrida ? db.metas.corrida + '× corrida' : ''].filter(Boolean).join(' · ')}` : 'Sem metas definidas', visao === 'mes' ? 'Mês' : 'Semana', '', toggle) +
-    (visao === 'mes' ? visaoMes() : visaoSemana());
-}
 
-function visaoSemana(){
-  const ini = segunda(new Date());
-  const fim = new Date(ini); fim.setDate(fim.getDate() + 7);
-  const daSemana = db.sessoes.filter(s => { const d = new Date(s.data); return d >= ini && d < fim; });
-  const acad = daSemana.filter(s => s.tipo !== 'corrida').length;
-  const corr = daSemana.filter(s => s.tipo === 'corrida');
-  const km = corr.reduce((a, s) => a + (num(s.corrida?.km) || 0), 0);
-  const nomes = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-  const hj = (new Date().getDay() + 6) % 7;
-  const dias = nomes.map((n, i) => {
-    const doDia = daSemana.filter(s => (new Date(s.data).getDay() + 6) % 7 === i);
-    const marca = doDia.map(s => s.tipo === 'corrida' ? '<b class="r">R</b>' : `<b>${esc(s.tipo)}</b>`).join('') || '<b>&nbsp;</b>';
-    return `<div class="dia ${i === hj ? 'hj' : ''}"><small>${n}</small>${marca}</div>`;
-  }).join('');
-  let linhas = '';
-  for(let w = 0; w < 8; w++){
-    const a = new Date(ini); a.setDate(a.getDate() - 7 * w);
-    const b = new Date(a); b.setDate(b.getDate() + 7);
-    const ss = db.sessoes.filter(s => { const d = new Date(s.data); return d >= a && d < b; });
-    const g = ss.filter(s => s.tipo !== 'corrida').length;
-    const k = ss.filter(s => s.tipo === 'corrida').reduce((x, s) => x + (num(s.corrida?.km) || 0), 0);
-    linhas += `<tr><td>${fmtData(a)}</td>
-      <td>${metaTxt(g, metaAcad(a))}<div class="bar"><i style="width:${Math.min(100, g / (metaAcad(a) || Math.max(3, g)) * 100)}%"></i></div></td>
-      <td class="num">${k ? fmtNum(k) + ' km' : '—'}</td></tr>`;
-  }
-  const temMetaSemana = db.metas.academia || db.metas.corrida;
-  return blocoMetas() + (temMetaSemana ? '' : `<div class="sec"><span>Esta semana</span></div>
-    <div class="stats">
-      <div class="stat"><b>${metaTxt(acad, metaAcad(ini))}</b><span>academia</span></div>
-      <div class="stat"><b>${metaTxt(corr.length, db.metas.corrida)}</b><span>corrida</span></div>
-      <div class="stat"><b>${km ? fmtNum(km) : '0'}</b><span>km</span></div>
-    </div>`) + `
-    <div class="sec"><span>Dias</span><span>R = corrida</span></div><div class="dias">${dias}</div>
-    <div class="sec"><span>Últimas 8 semanas</span></div>
-    <div class="card"><table><tr><th>Semana de</th><th>Academia</th><th class="num">Corrida</th></tr>${linhas}</table></div>` + blocoVolume();
-}
 
-function visaoMes(){
-  const hoje = new Date();
-  const ref = new Date(hoje.getFullYear(), hoje.getMonth() + mesOffset, 1);
-  const ano = ref.getFullYear(), mes = ref.getMonth();
-  const fimMes = new Date(ano, mes + 1, 1);
-  const doMes = db.sessoes.filter(s => { const d = new Date(s.data); return d >= ref && d < fimMes; });
-  const porDia = {};
-  doMes.forEach(s => { const k = new Date(s.data).getDate(); (porDia[k] = porDia[k] || []).push(s); });
-  const offset = (ref.getDay() + 6) % 7;
-  const nDias = new Date(ano, mes + 1, 0).getDate();
-  let cels = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map(h => `<div class="h">${h}</div>`).join('');
-  for(let i = 0; i < offset; i++) cels += '<div class="c fora" aria-hidden="true"></div>';
-  for(let dia = 1; dia <= nDias; dia++){
-    const ss = porDia[dia] || [];
-    const ehHoje = mesOffset === 0 && dia === hoje.getDate();
-    const marcas = ss.map(s => s.tipo === 'corrida' ? '<b class="r">R</b>' : `<b>${esc(s.tipo)}</b>`).join(' ');
-    const desc = ss.length ? ss.map(s => tituloSessao(s).nome).join(', ') : 'sem registro';
-    cels += `<div class="c ${ss.length ? 'fez' : ''} ${ehHoje ? 'hj' : ''}" aria-label="Dia ${dia}: ${desc}"><small>${dia}</small><span>${marcas}</span></div>`;
-  }
-  const acad = doMes.filter(s => s.tipo !== 'corrida').length;
-  const corr = doMes.filter(s => s.tipo === 'corrida');
-  const km = corr.reduce((a, s) => a + (num(s.corrida?.km) || 0), 0);
-  // semanas (seg–dom) que começam neste mês e bateram a meta de academia
-  let semanasMeta = 0, semanasTotal = 0;
-  for(let d = segunda(ref); d < fimMes; d.setDate(d.getDate() + 7)){
-    if(d.getMonth() !== mes && d < ref) continue;
-    const f = new Date(d); f.setDate(f.getDate() + 7);
-    if(d > hoje) break;
-    semanasTotal++;
-    if(semanaNaMeta(d)) semanasMeta++;
-  }
-  const titulo = ref.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-  return `<div class="mes-wrap"><div class="mes-nav">
-      <button type="button" class="icon-btn" data-mes="-1" aria-label="Mês anterior">${IC.esq}</button>
-      <h2>${titulo}</h2>
-      <button type="button" class="icon-btn" data-mes="1" aria-label="Próximo mês" ${mesOffset >= 0 ? 'disabled style="opacity:.35"' : ''}>${IC.dir}</button>
-    </div>
-    <div class="mes">${cels}</div>
-    <div class="sec"><span>Resumo do mês</span><span>R = corrida</span></div>
-    <div class="stats">
-      <div class="stat"><b>${acad}</b><span>academia</span></div>
-      <div class="stat"><b>${km ? fmtNum(km) : '0'}</b><span>km · ${corr.length} corr.</span></div>
-      ${temMetaSemanal() ? `<div class="stat"><b>${semanasMeta}/${semanasTotal}</b><span>semanas na meta</span></div>` : `<div class="stat"><b>${Object.keys(porDia).length}</b><span>dias ativos</span></div>`}
-    </div></div>`;
-}
 
 /* =========================================================
    HISTÓRICO + DASHBOARD
    ========================================================= */
-function subidasDeCarga(){
-  const max = {}; let n = 0;
-  for(const s of db.sessoes){
-    if(!s.ex) continue;
-    for(const [id, sets] of Object.entries(s.ex)){
-      if(ehCardio(id)) continue;
-      const b = melhorSerie(sets); if(!b || !b.kg) continue;
-      if(max[id] != null && b.kg > max[id]) n++;
-      if(max[id] == null || b.kg > max[id]) max[id] = b.kg;
-    }
-  }
-  return n;
-}
 function graficoLinha(pts){
   const W = 600, H = 240, L = 46, R = 18, T = 22, B = 34;
   const vs = pts.map(p => p.v);
@@ -1099,106 +899,13 @@ function graficoLinha(pts){
   const xs = `<text x="${L}" y="${H - 8}">${fmtData(pts[0].d)}</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${fmtData(ult.d)}</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolução por treino, de ${fmtNum(pts[0].v)} a ${fmtNum(ult.v)} kg">${g}<polyline class="linha" points="${linha}"/>${ptsSvg}${lab}${xs}</svg>`;
 }
-function graficoFrequencia(){
-  const W = 600, H = 220, L = 30, R = 10, T = 18, B = 34, N = 12;
-  const ini = segunda(new Date());
-  const semanas = [];
-  for(let w = N - 1; w >= 0; w--){
-    const a = new Date(ini); a.setDate(a.getDate() - 7 * w);
-    const b = new Date(a); b.setDate(b.getDate() + 7);
-    semanas.push({ a, n: db.sessoes.filter(s => { const d = new Date(s.data); return s.tipo !== 'corrida' && d >= a && d < b; }).length });
-  }
-  const mA = db.metas.academia;
-  const mx = Math.max((mA || 3) + 1, ...semanas.map(s => s.n));
-  const bw = (W - L - R) / N;
-  const y = v => T + (H - T - B) * (1 - v / mx);
-  let barras = '';
-  semanas.forEach((s, i) => {
-    const h = Math.max(3, (H - T - B) * s.n / mx);
-    barras += `<rect class="barra ${s.n ? '' : 'zero'}" x="${L + i * bw + bw * .18}" y="${H - B - h}" width="${bw * .64}" height="${h}" rx="3"><title>Semana de ${fmtData(s.a)}: ${s.n}</title></rect>`;
-    if(s.n) barras += `<text class="val" x="${L + i * bw + bw / 2}" y="${H - B - h - 6}" text-anchor="middle">${s.n}</text>`;
-  });
-  const meta = mA ? `<line class="meta" x1="${L}" x2="${W - R}" y1="${y(mA)}" y2="${y(mA)}"/>` : '';
-  const xs = `<text x="${L}" y="${H - 8}">${fmtData(semanas[0].a)}</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${fmtData(semanas[N - 1].a)}</text>`;
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Treinos de academia por semana nas últimas ${N} semanas">${meta}${barras}${xs}</svg>`;
-}
 
 /* ---------- força estimada (Epley) e carga máxima ---------- */
 let dashModo = 'forca';
 const forcaEst = (kg, r) => kg * (1 + r / 30);
-function serieCarga(exId, modo = dashModo){
-  return db.sessoes.filter(s => s.ex && s.ex[exId]).map(s => {
-    let v = 0;
-    for(const z of s.ex[exId]){
-      const kg = num(z.kg) || 0, r = num(z.reps) || 0;
-      if(!kg) continue;
-      v = Math.max(v, modo === 'forca' ? forcaEst(kg, r) : kg);
-    }
-    return { d: s.data, v };
-  }).filter(p => p.v > 0);
-}
 
-/* ---------- séries por músculo ----------
-   Uma conta só, usada na Semana, no Histórico, no mapa por semana e na Análise com IA.
-   Músculo principal conta a série inteira; secundário conta ½. Sem ficha, vale o grupo da biblioteca.
-   vol[g] = séries no período · porEx[g][id] = { p: séries como principal, s: como secundário, t: treinos } */
-function volumeMusculos(sessoes){
-  const vol = {}, porEx = {};
-  const soma = (g, id, n, sec) => {
-    vol[g] = (vol[g] || 0) + (sec ? n / 2 : n);
-    const o = ((porEx[g] = porEx[g] || {})[id] = porEx[g][id] || { p: 0, s: 0, t: 0 });
-    o[sec ? 's' : 'p'] += n; o.t++;
-  };
-  sessoes.forEach(s => Object.entries(s.ex || {}).forEach(([id, sets]) => {
-    if(ehCardio(id) || !sets || !sets.length) return;
-    const f = FICHAS[id], n = sets.length;
-    if(f){ f.p.forEach(g => soma(g, id, n, false)); f.s.forEach(g => soma(g, id, n, true)); }
-    else if(BIB_ID[id]) soma(BIB_ID[id].g, id, n, false);
-  }));
-  return { vol, porEx };
-}
-const entre = (a, b) => db.sessoes.filter(s => { const d = new Date(s.data); return (!a || d >= a) && (!b || d < b); });
-const r1 = n => fmtNum(Math.round(n * 10) / 10);
-/* lista dos exercícios que somaram as séries de um músculo (Semana e Histórico) */
-function volDetalhe(g, porEx, semanas, noHist = false){
-  const its = Object.entries(porEx[g] || {}).map(([id, o]) => ({ id, ...o, c: (o.p + o.s / 2) / semanas })).sort((a, b) => b.c - a.c);
-  if(!its.length) return `<div class="hp-vd" id="vd-${g}"><p class="cs">Nenhuma série nesse período.</p></div>`;
-  return `<div class="hp-vd" id="vd-${g}">${its.map(x => {
-    const papel = x.p && x.s ? 'principal e secundário' : x.p ? 'principal' : 'secundário · conta ½';
-    const nome = `<b>${esc(nomeEx(x.id))}</b><small>${x.p + x.s} ${plural(x.p + x.s, 'série', 'séries')} em ${x.t} ${plural(x.t, 'treino', 'treinos')} · ${papel}</small>`;
-    const temGraf = pontosEx(x.id, 'forca').length > 0;
-    return `<div class="hp-vd-l">${temGraf ? `<button type="button" class="hp-vd-n" ${noHist ? `data-hex="${x.id}"` : `data-ir="historico" data-hex-ir="${x.id}"`}>${nome}</button>` : `<span class="hp-vd-n">${nome}</span>`}<span class="hp-vd-v">${r1(x.c)}<small>${semanas === 1 ? ' séries' : '/sem'}</small></span></div>`;
-  }).join('')}</div>`;
-}
-let volModo = 'semana', volMus = null;
-function blocoVolume(){
-  const ini = segunda(new Date());
-  let a, b, div;
-  if(volModo === 'semana'){ a = ini; b = new Date(ini); b.setDate(b.getDate() + 7); div = 1; }
-  else { a = new Date(ini); a.setDate(a.getDate() - 28); b = ini; div = 4; }
-  const { vol: conta, porEx } = volumeMusculos(entre(a, b));
-  const doPlanoG = new Set();
-  plano().rotacao.forEach(k => plano().treinos[k].ex.forEach(e => { const g = BIB_ID[e.id]?.g; if(g && g !== 'cardio') doPlanoG.add(g); }));
-  const grupos = Object.keys(GRUPOS).filter(g => doPlanoG.has(g) || conta[g]);
-  if(!grupos.length) return '';
-  const linhas = grupos.map(g => {
-    const v = Math.round((conta[g] || 0) / div * 10) / 10;
-    const cls = v >= 10 ? 'na-faixa' : (v ? 'abaixo' : '');
-    const ab = volMus === g;
-    return `<button type="button" class="vol-l vol-bt ${ab ? 'on' : ''}" data-vmus="${g}" aria-expanded="${ab}" aria-controls="vd-${g}"><span>${GRUPOS[g]}</span>
-      <span class="vol-b" role="img" aria-label="${GRUPOS[g]}: ${fmtNum(v)} séries"><i class="faixa"></i><i class="valor ${cls}" style="width:${Math.min(100, v / 24 * 100)}%"></i></span>
-      <b>${fmtNum(v)}</b></button>${ab ? volDetalhe(g, porEx, div) : ''}`;
-  }).join('');
-  return `<div class="sec sec-vol"><span>Séries por músculo</span>
-    <div class="toggle mini" role="group" aria-label="Período">
-      <button type="button" data-vol="semana" class="${volModo === 'semana' ? 'on' : ''}" aria-pressed="${volModo === 'semana'}">Esta semana</button>
-      <button type="button" data-vol="media" class="${volModo === 'media' ? 'on' : ''}" aria-pressed="${volModo === 'media'}">Média 4 sem.</button></div></div>
-    <section class="card vol">
-      <div class="vol-l vol-esc" aria-hidden="true"><span></span><div class="vol-escala"><span style="left:41.67%">10</span><span style="left:83.33%">20</span></div><b></b></div>
-      ${linhas}
-      <p class="m-frase vol-nota">Faixa verde: 10–20 séries por músculo por semana, referência da literatura para hipertrofia. Músculos secundários contam meia série. Abaixo da faixa ainda há ganho, só mais devagar. Toque num músculo para ver de onde vêm as séries.</p>
-    </section>`;
-}
+/* ---------- séries por músculo ---------- */
+let volModo = 'semana';
 
 /* ---------- backup: no celular abre o menu de compartilhar (Drive, e-mail…), no PC baixa o arquivo ---------- */
 async function exportarBackup(){
@@ -1266,7 +973,13 @@ function textoAnalise(k){
   if(comPrev) L.push(`- Séries feitas × previstas: ${feitas}/${previstas} (${Math.round(feitas / previstas * 100)}%)${comPrev < gym.length ? ` · em ${comPrev} de ${gym.length} treinos; os outros são de antes do app guardar o previsto` : ''}`);
   else if(gym.length) L.push('- Previsto × feito: estes treinos são de antes do app guardar o previsto; compare com o plano acima.');
   // volume por músculo
-  const { vol } = volumeMusculos(gym);
+  const vol = {};
+  gym.forEach(s => Object.entries(s.ex || {}).forEach(([id, sets]) => {
+    if(ehCardio(id)) return;
+    const f = FICHAS[id];
+    if(f){ f.p.forEach(g => vol[g] = (vol[g] || 0) + sets.length); f.s.forEach(g => vol[g] = (vol[g] || 0) + sets.length / 2); }
+    else { const g = BIB_ID[id]?.g; if(g) vol[g] = (vol[g] || 0) + sets.length; }
+  }));
   const vl = Object.entries(vol).sort((x, y) => y[1] - x[1]).map(([g, n]) => `${GRUPOS[g] || g} ${fmtNum(n / semanas)}`);
   if(vl.length) L.push(`- Séries por músculo por semana (secundários contam ½): ${vl.join(' · ')}`);
   L.push('');
@@ -1290,7 +1003,7 @@ function textoAnalise(k){
       const tag = [pv && pv.soHoje ? 'só nesse dia' : '', pv && pv.trocadoDe ? 'no lugar de ' + nomeEx(pv.trocadoDe) : ''].filter(Boolean).join(', ');
       if(!sets.length){ L.push(`- ${nomeEx(id)}: NÃO FEITO (previsto ${pv ? pv.series : '?'} séries)`); return; }
       const ant = (() => { for(let i = db.sessoes.indexOf(s) - 1; i >= 0; i--){ const l = db.sessoes[i].ex && db.sessoes[i].ex[id]; if(l && l.length) return l; } return null; })();
-      L.push(`- ${nomeEx(id)}${tag ? ` (${tag})` : ''}: ${sets.map(z => serieTxt(id, z)).join(', ')}${pv ? ` · ${sets.length}/${pv.series} séries` : ''}${ant ? ` · anterior: ${ant.map(z => serieTxt(id, z)).join(', ')}` : ' · primeira vez'}${s.notas && s.notas[id] ? ` · nota: "${s.notas[id]}"` : ''}`);
+      L.push(`- ${nomeEx(id)}${tag ? ` (${tag})` : ''}: ${sets.map(z => serieTxt(id, z)).join(', ')}${pv ? ` · ${sets.length}/${pv.series} séries` : ''}${ant ? ` · anterior: ${ant.map(z => serieTxt(id, z)).join(', ')}` : ' · primeira vez'}`);
     });
   });
   // progressão
@@ -1367,7 +1080,7 @@ function salvarRegistro(){
 }
 
 /* ---------- histórico: resumo (destaques, músculos, consistência) + exercícios com detalhe ---------- */
-let histPer = 'p8', histEx = null, histModo = 'forca', histMus = null;
+let histPer = 'p8', histEx = null, histModo = 'forca';
 const PERIODOS = { p4: ['4 semanas', 28], p8: ['8 semanas', 56], p3m: ['3 meses', 91], tudo: ['Tudo', Infinity] };
 const DIA = 864e5;
 function pontosEx(id, modo, desde){
@@ -1409,28 +1122,7 @@ function proximoPasso(id, sets){
   if(!falta) return `<b class="ok">Pode subir a carga</b> na próxima: bateu ${fx[1]} reps em todas as séries.`;
   return `Faltam <b>${falta} ${plural(falta, 'rep', 'reps')}</b> para bater ${fx[1]} em todas as séries e subir a carga.`;
 }
-/* mapa: séries por músculo em cada uma das últimas 8 semanas. A média esconde semanas paradas; aqui elas aparecem. */
-function mapaVolume(){
-  const N = 8, ini = segunda(new Date()), sem = [];
-  for(let w = N - 1; w >= 0; w--){
-    const a = new Date(ini); a.setDate(a.getDate() - 7 * w);
-    const b = new Date(a); b.setDate(b.getDate() + 7);
-    sem.push({ a, vol: volumeMusculos(entre(a, b)).vol });
-  }
-  const grupos = Object.keys(GRUPOS).filter(g => g !== 'cardio' && sem.some(s => s.vol[g]));
-  if(!grupos.length) return '';
-  const cls = v => !v ? '' : v < 10 ? 'baixo' : v <= 20 ? 'ok' : 'alto';
-  const cabMv = `<div class="mv-l mv-cab" aria-hidden="true"><span></span>${sem.map((s, i) => `<small>${i === N - 1 ? 'esta' : pad2(s.a.getDate()) + '/' + pad2(s.a.getMonth() + 1)}</small>`).join('')}</div>`;
-  const linhas = grupos.map(g => `<div class="mv-l"><span>${GRUPOS[g]}</span>${sem.map((s, i) => {
-    const v = s.vol[g] || 0;
-    return `<i class="${cls(v)}${i === N - 1 ? ' atual' : ''}" title="${GRUPOS[g]} · semana de ${fmtData(s.a)}: ${r1(v)} séries">${v ? Math.round(v) : ''}</i>`;
-  }).join('')}</div>`).join('');
-  return `<div class="card hp-mapa"><p class="rot">Séries por músculo · semana a semana</p>
-    <div class="mv" role="img" aria-label="Séries por músculo em cada uma das últimas 8 semanas">${cabMv}${linhas}</div>
-    <div class="hp-leg mv-leg"><span><i class="baixo"></i>abaixo de 10</span><span><i class="ok"></i>10–20</span><span><i class="alto"></i>acima de 20</span></div>
-    <p class="cs hp-nota">Cada quadrado é uma semana (segunda a domingo). A última ainda está em andamento.</p></div>`;
-}
-function painelHist(){
+function painelHist(soDet){
   const [nomeP, dias] = PERIODOS[histPer];
   const agora = new Date(), desde = dias === Infinity ? null : new Date(agora - dias * DIA);
   const noPer = db.sessoes.filter(s => !desde || new Date(s.data) >= desde);
@@ -1452,30 +1144,49 @@ function painelHist(){
   const destHtml = dest.length ? `<div class="hp-dest">${dest.map(([c, t, x, s, id]) => `<button type="button" class="card hp-d ${c}" data-hex="${id}"><span class="rot">${t}</span><b>${x}</b><span class="cs">${s}</span></button>`).join('')}</div>`
     : `<div class="card hp-poucos"><p class="cs">Os destaques (maior evolução, o que está parado e os recordes) aparecem com algumas semanas de registros.</p></div>`;
   /* volume por músculo */
-  const { vol, porEx } = volumeMusculos(noPer);
+  const vol = {};
+  noPer.forEach(s => Object.entries(s.ex || {}).forEach(([id, sets]) => {
+    if(ehCardio(id)) return; const f = FICHAS[id], n = sets.length;
+    if(f){ f.p.forEach(g => vol[g] = (vol[g] || 0) + n); f.s.forEach(g => vol[g] = (vol[g] || 0) + n / 2); }
+    else if(BIB_ID[id]) vol[BIB_ID[id].g] = (vol[BIB_ID[id].g] || 0) + n;
+  }));
   const vl = Object.entries(vol).map(([g, n]) => [g, n / semanas]).sort((a, b) => b[1] - a[1]);
-  const volHtml = vl.length ? vl.map(([g, n]) => { const ok = n >= 10 && n <= 20, ab = histMus === g;
-      return `<button type="button" class="hp-vl ${ab ? 'on' : ''}" data-hmus="${g}" aria-expanded="${ab}" aria-controls="vd-${g}"><span>${GRUPOS[g] || g}</span><span class="hp-bar"><i class="faixa"></i><i class="v ${ok ? 'ok' : 'aviso'}" style="width:${Math.min(100, n / 22 * 100).toFixed(0)}%"></i></span><b class="${ok ? 'ok' : 'aviso'}">${r1(n)}</b></button>${ab ? volDetalhe(g, porEx, semanas, true) : ''}`; }).join('')
-      + `<p class="cs hp-nota">Séries por semana · a faixa tracejada é 10–20, o que a ciência indica para crescer (secundários contam ½). Toque num músculo para ver de onde vêm as séries.</p>`
+  const volHtml = vl.length ? vl.map(([g, n]) => { const ok = n >= 10 && n <= 20; return `<div class="hp-vl"><span>${GRUPOS[g] || g}</span><div class="hp-bar"><i class="faixa"></i><i class="v ${ok ? 'ok' : 'aviso'}" style="width:${Math.min(100, n / 22 * 100).toFixed(0)}%"></i></div><b class="${ok ? 'ok' : 'aviso'}">${fmtNum(Math.round(n * 10) / 10)}</b></div>`; }).join('') + `<p class="cs hp-nota">Séries por semana · a faixa tracejada é 10–20, o que a ciência indica para crescer (secundários contam ½)</p>`
     : '<p class="cs">Registre treinos de musculação para ver o volume por músculo.</p>';
-  /* consistência: 12 semanas */
-  const ini12 = segunda(agora); ini12.setDate(ini12.getDate() - 7 * 11);
-  const porDia = {}; db.sessoes.forEach(s => { const k = diaISO(new Date(s.data)); porDia[k] = porDia[k] === 'g' || s.tipo !== 'corrida' ? 'g' : 'c'; });
-  let cols = '';
-  for(let w = 0; w < 12; w++){
-    let c = '';
-    for(let d = 0; d < 7; d++){ const dt = new Date(ini12); dt.setDate(dt.getDate() + w * 7 + d); const k = porDia[diaISO(dt)]; const fut = dt > agora; c += `<i class="${k === 'g' ? 'g' : k === 'c' ? 'c' : ''}${fut ? ' fut' : ''}" title="${dt.toLocaleDateString('pt-BR')}"></i>`; }
-    cols += `<div>${c}</div>`;
-  }
+  /* semana a semana (o que era a aba Semana) */
   const gym = noPer.filter(s => s.tipo !== 'corrida'), km = noPer.filter(s => s.tipo === 'corrida').reduce((a, s) => a + (num(s.corrida?.km) || 0), 0);
   let feitas = 0, prev = 0; gym.forEach(s => { if(s.previsto){ prev += Object.values(s.previsto).reduce((a, p) => a + p.series, 0); feitas += Object.values(s.ex || {}).reduce((a, l) => a + l.length, 0); } });
-  const nums = [[fmtNum(Math.round(gym.length / semanas * 10) / 10), 'treinos/semana'], km ? [fmtNum(km), 'km de corrida'] : null, prev ? [Math.round(feitas / prev * 100) + '%', 'séries feitas'] : null].filter(Boolean);
-  const consHtml = `<div class="hp-cal" aria-label="Dias com treino nas últimas 12 semanas">${cols}</div>
-    <div class="hp-leg"><span><i class="g"></i>academia</span><span><i class="c"></i>corrida</span></div>
-    <div class="hp-nums">${nums.map(([n, t]) => `<div><b>${n}</b><span class="rot">${t}</span></div>`).join('')}</div>`;
+  const iniSem = segunda(agora); let semLinhas = '';
+  for(let w = 0; w < 6; w++){
+    const a = new Date(iniSem); a.setDate(a.getDate() - 7 * w); const b = new Date(a); b.setDate(b.getDate() + 7);
+    const ss = db.sessoes.filter(s => { const d = new Date(s.data); return d >= a && d < b; });
+    const g = ss.filter(s => s.tipo !== 'corrida').length, k = ss.filter(s => s.tipo === 'corrida').reduce((x, s) => x + (num(s.corrida?.km) || 0), 0);
+    const meta = db.metas.academia ? metaAcad(a) : 0, n = Math.max(meta || 3, g);
+    semLinhas += `<div class="hs-l${w ? '' : ' atual'}"><span>${fmtData(a)}</span><span class="hm-seg g" aria-hidden="true">${Array.from({ length: n }, (_, i) => `<i class="${i < g ? 'on' : ''}"></i>`).join('')}</span>
+      <b>${meta ? g + '/' + meta : g}</b><span class="hs-km${k ? ' c' : ''}">${k ? fmtNum(k) + ' km' : '—'}</span></div>`;
+  }
+  const semHtml = `<div class="hs-cab"><span>semana</span><span>academia</span><span></span><span>corrida</span></div>${semLinhas}`;
+  const nums = [];
+  if(temMetaSemanal()){ const sq = sequencia(); nums.push([sq, plural(sq, 'semana na meta', 'semanas na meta')]); }
+  nums.push([fmtNum(Math.round(gym.length / semanas * 10) / 10), 'treinos/semana']);
+  if(db.metas.kmMes){ const ref = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    const kmM = db.sessoes.filter(s => s.tipo === 'corrida' && new Date(s.data) >= ref).reduce((a, s) => a + (num(s.corrida?.km) || 0), 0);
+    nums.push([`${fmtNum(kmM)}<small>/${db.metas.kmMes} km</small>`, 'corrida no mês']); }
+  else if(km) nums.push([fmtNum(km) + '<small> km</small>', 'de corrida']);
+  if(nums.length < 3 && prev) nums.push([Math.round(feitas / prev * 100) + '%', 'séries feitas']);
+  const numsHtml = `<div class="hs-nums n${nums.length}">${nums.map(([n, t]) => `<div class="card"><b>${n}</b><span>${t}</span></div>`).join('')}</div>`;
+  /* metas de carga */
+  const cargasHtml = db.metas.cargas.map(cg => {
+    const atual = melhorCarga(cg.exId), span = cg.kg - cg.inicio;
+    const pct = span <= 0 ? (atual >= cg.kg ? 100 : 0) : Math.max(0, Math.min(100, (atual - cg.inicio) / span * 100));
+    const falta = Math.max(0, cg.kg - atual), prazo = cg.prazo ? 'até ' + cg.prazo.split('-').reverse().slice(0, 2).join('/') : 'sem prazo';
+    return `<section class="card"><div class="card-head"><span class="t">Meta de carga</span><span class="t">${prazo}</span></div>
+      <div class="m-top"><span class="m-nome">${esc(cg.nome)}</span><span class="m-kg">${fmtNum(atual)} <span>→ ${fmtNum(cg.kg)} kg</span></span></div>
+      <div class="prog"><i style="width:${pct}%"></i></div>
+      <p class="m-frase">${falta ? `${cg.inicio ? `Partiu de ${fmtNum(cg.inicio)} kg · ` : ''}faltam ${fmtNum(falta)} kg` : 'Meta batida.'}</p></section>`; }).join('');
   /* lista + detalhe */
   info.sort((a, b) => a.st.o - b.st.o || nomeEx(a.id).localeCompare(nomeEx(b.id)));
-  const sel = info.find(x => x.id === histEx) || info[0];
+  const sel = info.find(x => x.id === histEx) || (soDet ? null : info[0]);
   const lista = info.map(x => { const t = letraDe(x.id), g = BIB_ID[x.id] ? GRUPOS[BIB_ID[x.id].g] : '';
     return `<button type="button" class="hp-ex ${sel && x.id === sel.id ? 'on' : ''}" data-hex="${x.id}" aria-pressed="${sel && x.id === sel.id}">
       <span class="hp-ex-n"><b>${esc(nomeEx(x.id))}</b><small>${t ? 'Treino ' + t + ' · ' : ''}${g}</small></span>
@@ -1485,11 +1196,11 @@ function painelHist(){
   if(sel){
     const pts = pontosEx(sel.id, histModo, desde), todos = pontosEx(sel.id, 'forca');
     const u = pts[pts.length - 1], dlt = pts.length >= 2 ? u.v - pts[0].v : null;
-    const recorde = todos.length >= 2 && todos[todos.length - 1].v >= Math.max(...todos.map(p => p.v));
+    const recorde = todos.length >= 2 && todos[todos.length - 1].v > Math.max(...todos.slice(0, -1).map(p => p.v));
     const ultSets = todos[todos.length - 1].sets;
     const g = BIB_ID[sel.id] ? GRUPOS[BIB_ID[sel.id].g] : '', t = letraDe(sel.id);
     const legenda = { forca: 'força estimada (1RM) da melhor série', carga: 'maior peso usado em cada treino', volume: 'kg levantados no treino (peso × reps)' }[histModo];
-    det = `<button type="button" class="lnk hp-voltar" data-hvoltar="1">← Exercícios</button>
+    det = `<button type="button" class="lnk hp-voltar" data-hvoltar="1">‹ Histórico</button>
       <p class="rot">${t ? 'Treino ' + t + ' · ' : ''}${g}</p><h2 class="hp-t">${esc(nomeEx(sel.id))}</h2>
       <div class="hp-modo" role="group" aria-label="Medida">${[['forca', 'Força'], ['carga', 'Carga'], ['volume', 'Volume']].map(([k, n]) => `<button type="button" data-hmodo="${k}" class="${k === histModo ? 'on' : ''}" aria-pressed="${k === histModo}">${n}</button>`).join('')}</div>
       ${u ? `<div class="hp-big"><b>${fmtNum(Math.round(u.v * 10) / 10)}</b><span>kg</span>${dlt != null ? `<em class="${dlt >= 0 ? 'ok' : 'cai'}">${dlt >= 0 ? '+' : ''}${fmtNum(Math.round(dlt * 10) / 10)} kg · ${nomeP.toLowerCase()}</em>` : ''}${recorde ? `<em class="rec">recorde ${fmtData(todos[todos.length - 1].d)}</em>` : ''}</div>
@@ -1497,23 +1208,28 @@ function painelHist(){
       ${pts.length >= 2 ? `<div class="chart" style="margin-top:6px">${graficoLinha(pts)}</div>` : `<p class="chart-vazio">Mais um treino com esse exercício e a linha aparece aqui.</p>`}` : '<p class="chart-vazio">Sem registros nesse período.</p>'}
       <div class="hp-info">
         <div><span class="rot">Melhor série</span><b>${melhorTxt(todos.flatMap(p => p.sets))}</b></div>
-        <div><span class="rot">Última vez · ${fmtData(todos[todos.length - 1].d)}</span><b>${ultSets.map(z => serieTxt(sel.id, z)).join(' · ')}</b></div>
-        <div class="hp-prox"><span class="rot">Próximo passo</span><p>${proximoPasso(sel.id, ultSets)}</p></div></div>`;
+        <div class="hp-prox"><span class="rot">Próximo passo</span><p>${proximoPasso(sel.id, ultSets)}</p></div></div>
+      <div class="hp-vezes"><p class="rot">Últimas vezes</p>${todos.slice(-5).reverse().map(p => `<div><span>${fmtData(p.d)}</span><b>${p.sets.map(z => serieTxt(sel.id, z)).join(' · ')}</b></div>`).join('')}</div>`;
   }
   const exHtml = info.length ? `<div class="hp-split ${histEx ? 'sel' : ''}">
       <div class="card hp-lista"><p class="rot" style="margin-bottom:6px">Exercícios · os que precisam de atenção primeiro</p>${lista}</div>
       <div class="card hp-det ${histEx ? '' : 'auto'}">${det}</div></div>`
     : '<div class="card"><p class="chart-vazio">Registre cargas para ver a evolução dos exercícios.</p></div>';
-  return `<div class="hp-topo">${filtros}</div>${destHtml}
-    <div class="hp-duo"><div class="card"><p class="rot">Volume por músculo · ${nomeP.toLowerCase()}</p>${volHtml}</div>
-      <div class="card"><p class="rot">Consistência · últimas 12 semanas</p>${consHtml}</div></div>
-    ${mapaVolume()}
+  if(soDet) return det ? `<div class="hp-tela">${det}</div>` : '';
+  return `<div class="hp-topo">${filtros}</div>${numsHtml}${destHtml}
+    <div class="hp-duo"><div class="card"><p class="rot">Semana a semana</p>${semHtml}</div>
+      <div class="card"><p class="rot">Séries por músculo · média por semana</p>${volHtml}</div></div>
+    ${cargasHtml ? `<div class="metas-grid">${cargasHtml}</div>` : ''}
     <div class="sec"><span>Exercícios</span><span>${info.length}</span></div>${exHtml}`;
 }
 
+let histRolagem = 0;
+const telaEstreita = () => matchMedia('(max-width: 899px)').matches;
 function telaHistorico(){
   const topo = cab(`${db.sessoes.length} registros`, 'Histórico');
   if(!db.sessoes.length) return topo + `<p class="vazio">Nenhum treino registrado ainda.</p>`;
+  /* no celular, o detalhe do exercício é uma tela própria */
+  if(histEx && telaEstreita()){ const d = painelHist(true); if(d) return d; histEx = null; }
   const mesDe = s => { const d = new Date(s.data); return d.getFullYear() + '-' + d.getMonth(); };
   let mesAtual = null;
   const itens = db.sessoes.slice().reverse().map(s => {
@@ -1541,8 +1257,7 @@ function telaHistorico(){
       const prev = s.previsto ? Object.values(s.previsto).reduce((a, p) => a + p.series, 0) : 0;
       tit = `${esc(ts.nome)} · ${esc(ts.foco)}<small class="h-res">${nEx} ${plural(nEx, 'exercício', 'exercícios')} · ${prev ? `${nS}/${prev}` : nS} séries</small>`;
       corpo = Object.entries(s.ex || {}).map(([id, sets]) =>
-        `<p>${esc(nomeEx(id))}<br><span>${sets.map(x => serieTxt(id, x)).join(' · ')}</span>${s.notas && s.notas[id] ? `<br><em class="h-nota">${esc(s.notas[id])}</em>` : ''}</p>`).join('')
-        + (s.dur ? `<p><span>Duração</span> ${durTxt(s.dur)}</p>` : '');
+        `<p>${esc(nomeEx(id))}<br><span>${sets.map(x => serieTxt(id, x)).join(' · ')}</span></p>`).join('');
     }
     if(edReg && edReg.id === s.id) return `<details class="card" open><summary><span class="h-tit">${tit}</span><span class="h-data">${data}</span></summary><div class="h-body">${formRegistro(s)}</div></details>`;
     return `<details class="card"><summary><span class="h-tit">${tit}</span><span class="h-data">${data}</span></summary>
@@ -1560,7 +1275,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v41 · nov/2026';
+const VERSAO = 'v40 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1580,6 +1295,9 @@ function telaPlano(){
         <div class="card"><div class="st-linha"><div><p class="m-nome">${resumoMetas}</p><p class="cs">Frequência semanal, carga e corrida. Tudo opcional.</p></div>
           <button type="button" class="mini-btn" data-acao="metas">${temAlgumaMeta() ? 'Editar' : 'Definir'}</button></div></div></div>
       ${window.blocoNuvem ? blocoNuvem() : ''}
+      <div><div class="sec"><span>Aparência</span></div>
+        <div class="card"><div class="tema" role="group" aria-label="Aparência">${[['claro', 'Claro'], ['escuro', 'Escuro'], ['auto', 'Automático']].map(([k, n]) => `<button type="button" data-tema="${k}" aria-pressed="${tema() === k}">${n}</button>`).join('')}</div>
+          <p class="cs" style="margin-top:10px">Automático segue o tema do celular.</p></div></div>
       <div><div class="sec"><span>Seus dados</span></div>
         <div class="card txt">
           <div class="backup-st"><span>Proteção contra limpeza</span><span class="${db.persistido || ehApp() ? 'st-ok' : ''}">${db.persistido ? '✓ ativa' : (ehApp() ? '✓ app instalado' : 'comum')}</span></div>
@@ -1887,8 +1605,28 @@ async function compartilhar(id){
 /* =========================================================
    RENDER + EVENTOS
    ========================================================= */
+const NV_IC = {
+  ok:  ['Sincronizado', '<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 18z"/><path d="M9.5 13.5l2 2 3.5-3.5"/>'],
+  env: ['Enviando…', '<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 18z"/><path d="M12 16v-5m-2 2l2-2 2 2"/>'],
+  off: ['Sem internet: salvo neste aparelho, envia quando voltar', '<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 18z"/><path d="M5 5l14 14"/>'],
+  erro:['Não sincronizou: toque para ver', '<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 18z"/><path d="M12 10.5v3.5M12 16.2v.1"/>'],
+  sem: ['Só neste aparelho: toque para criar conta', '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>'],
+};
+window.atualizarNuvemIcone = function(){
+  const b = document.getElementById('nv-ic'); if(!b) return;
+  const k = window.nuvemIcone ? nuvemIcone() : 'sem';
+  b.className = 'nv-ic ' + k; b.setAttribute('aria-label', NV_IC[k][0]); b.title = NV_IC[k][0];
+  b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${NV_IC[k][1]}</svg>`;
+};
+document.getElementById('nv-ic')?.addEventListener('click', () => {
+  const sem = !window.nuvemIcone || nuvemIcone() === 'sem';
+  aba = 'plano'; planoSecao = 'ajustes'; ed = null; me = null; render(); window.scrollTo(0, 0);
+  setTimeout(() => { if(sem) document.querySelector('[data-nuvem="abrir"]')?.click(); setTimeout(() => document.getElementById('nuvem-box')?.scrollIntoView({ block: 'start' }), 50); }, 0);
+});
+addEventListener('online', () => atualizarNuvemIcone()); addEventListener('offline', () => atualizarNuvemIcone());
 function render(){
-  const telas = { inicio: telaHome, hoje: telaHoje, semana: telaSemana, historico: telaHistorico, plano: telaPlano, editor: telaEditor, gerador: telaGerador, metas: telaMetas };
+  atualizarNuvemIcone();
+  const telas = { inicio: telaHome, hoje: telaHoje, historico: telaHistorico, plano: telaPlano, editor: telaEditor, gerador: telaGerador, metas: telaMetas };
   let html = telas[aba]() + (fichaAberta ? folhaFicha(fichaAberta) : '');
   if(concluido && !html.includes('folha-fundo')) html += folhaConcluido(concluido);
   if(instalarAberto && !html.includes('folha-fundo')) html += folhaInstalar(true);
@@ -1920,7 +1658,7 @@ function aplicarTema(t){
   document.querySelectorAll('.tema button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tema === t)));
 }
 mqEscuro.addEventListener?.('change', () => { if(tema() === 'auto') aplicarTema('auto'); });
-document.querySelector('.tema').addEventListener('click', e => {
+document.addEventListener('click', e => {
   const b = e.target.closest('button[data-tema]');
   if(b){ aplicarTema(b.dataset.tema); try{ localStorage.setItem(TEMA_KEY, b.dataset.tema); localStorage.setItem(TEMA_ESCOLHIDO, '1'); }catch(e){} }
 });
@@ -1928,7 +1666,7 @@ document.querySelector('.tema').addEventListener('click', e => {
 document.querySelector('nav.menu').addEventListener('click', e => {
   const b = e.target.closest('button[data-aba]'); if(!b) return;
   if((aba === 'editor') && !confirm('Sair do editor sem salvar?')) return;
-  metasEditando = false;
+  metasEditando = false; if(b.dataset.aba === 'historico') histEx = null;
   aba = b.dataset.aba; ed = null; me = null; trocando = null; fichaAberta = null; edReg = null; render(); window.scrollTo(0, 0);
 });
 
@@ -1949,9 +1687,6 @@ $('#app').addEventListener('input', e => {
       row.querySelector('.chk')?.setAttribute('aria-pressed', String(ok));
     }
     atualizarBarra(t);
-  } else if(el.dataset.nota){
-    const rd = rascunho(tipoAtual());
-    rd.notas[el.dataset.nota] = el.value.slice(0, 120); rd.editado = Date.now(); save();
   } else if(el.dataset.run){
     db.rascunhos.corrida[el.dataset.run] = el.value.trim(); save();
     const p = pace(num(db.rascunhos.corrida.km), num(db.rascunhos.corrida.min));
@@ -2116,23 +1851,18 @@ $('#app').addEventListener('click', e => {
     if(el.dataset.alt) rd.trocas[el.dataset.orig] = el.dataset.alt; else delete rd.trocas[el.dataset.orig];
     trocando = null; buscaTxt = ''; save(); render(); return;
   }
-  if(el.dataset.ir){ if(el.dataset.hexIr) histEx = el.dataset.hexIr; aba = el.dataset.ir; visao = 'semana'; render(); window.scrollTo(0, 0); return; }
+  if(el.dataset.ir){ if(el.dataset.hexIr){ histEx = el.dataset.hexIr; histRolagem = 0; } aba = el.dataset.ir === 'semana' ? 'historico' : el.dataset.ir; render(); window.scrollTo(0, 0); return; }
   if(el.dataset.vol){ volModo = el.dataset.vol; render(); return; }
   if(el.dataset.secao){ planoSecao = el.dataset.secao; render(); return; }
   if(el.dataset.modo){ dashModo = el.dataset.modo; render(); return; }
   if(el.dataset.hper){ histPer = el.dataset.hper; render(); return; }
   if(el.dataset.hmodo){ histModo = el.dataset.hmodo; render(); return; }
-  if(el.dataset.notaab){
-    const id = el.dataset.notaab, rd = rascunho(tipoAtual()), ant = ultimo(id)?.nota;
-    if(!rd.notas[id] && ant){ rd.notas[id] = ant; save(); }     // a nota anterior vem junto para manter ou editar
-    notaAberta = id; render();
-    setTimeout(() => { const i = document.querySelector(`[data-nota="${id}"]`); if(i){ i.focus({ preventScroll: true }); i.setSelectionRange(i.value.length, i.value.length); } }, 0);
+  if(el.dataset.hex){
+    if(telaEstreita()){ if(!histEx) histRolagem = window.scrollY; histEx = el.dataset.hex; render(); window.scrollTo(0, 0); }
+    else { histEx = el.dataset.hex; render(); document.querySelector('.hp-det')?.scrollIntoView({ block: 'nearest' }); }
     return;
   }
-  if(el.dataset.vmus){ volMus = volMus === el.dataset.vmus ? null : el.dataset.vmus; render(); return; }
-  if(el.dataset.hmus){ histMus = histMus === el.dataset.hmus ? null : el.dataset.hmus; render(); return; }
-  if(el.dataset.hex){ histEx = el.dataset.hex; render(); if(matchMedia('(max-width: 899px)').matches) setTimeout(() => document.querySelector('.hp-det')?.scrollIntoView({ block: 'start' }), 0); else document.querySelector('.hp-det')?.scrollIntoView({ block: 'nearest' }); return; }
-  if(el.dataset.hvoltar){ histEx = null; render(); setTimeout(() => document.querySelector('.hp-lista')?.scrollIntoView({ block: 'start' }), 0); return; }
+  if(el.dataset.hvoltar){ histEx = null; render(); window.scrollTo(0, telaEstreita() ? histRolagem : window.scrollY); return; }
   if(el.dataset.so){ soInstalar = el.dataset.so; render(); return; }
   if(el.dataset.step && me){
     const c = el.dataset.step, passo = c === 'kmMes' ? 5 : 1, max = c === 'kmMes' ? 500 : 7;
@@ -2186,14 +1916,13 @@ $('#app').addEventListener('click', e => {
     }
     if(!Object.keys(ex).length){ toast('Preencha ao menos uma série'); return; }
     const id = Date.now(); const rt = dataRetro();
-    const notas = notasDe(rd, ex);
-    const dur = rt ? 0 : Math.round((Date.now() - rd.criado) / 6e4);
-    db.sessoes.push({ id, data: (rt ? dataDeISO(rt) : new Date()).toISOString(), tipo: t, planoId: db.planoAtivo, nome: 'Treino ' + t, foco: plano().treinos[t].foco, ex, previsto: previstoDe(listaDia),
-      ...(notas ? { notas } : {}), ...(dur >= 5 && dur <= 240 ? { dur } : {}) });
+    const previstoDia = previstoDe(listaDia);
+    db.sessoes.push({ id, data: (rt ? dataDeISO(rt) : new Date()).toISOString(), tipo: t, planoId: db.planoAtivo, nome: 'Treino ' + t, foco: plano().treinos[t].foco, ex, previsto: previstoDia });
+    concAnim = Object.entries(previstoDia).every(([k, p]) => (ex[k] || []).length >= p.series);
     ordenarSessoes();
     db.desfazer = { id, rk: rascKey(t), rascunho: clone(rd), tipo: t, retro: rt, em: Date.now() };
     retroAberto = false; retroData = '';
-    delete db.rascunhos[rascKey(t)]; limparEscolha(); abertos.clear(); notaAberta = null; trocando = null; addHoje = false; ultimaSalva = id; concluido = id; aba = 'inicio';
+    delete db.rascunhos[rascKey(t)]; limparEscolha(); abertos.clear(); trocando = null; addHoje = false; ultimaSalva = id; concluido = id; aba = 'inicio';
     vibrar([12, 50, 12]); save(); render(); window.scrollTo(0, 0); prepararImagem(id);
   }
   if(acao === 'concluir-corrida'){
