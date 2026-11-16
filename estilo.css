@@ -745,3 +745,4 @@ body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area
   @keyframes cc-pulo{0%{transform:scale(1)}50%{transform:scale(1.14)}100%{transform:scale(1)}}
   @keyframes cc-raio{0%{opacity:.9;transform:rotate(var(--a)) translateY(-20px) scale(1)}100%{opacity:0;transform:rotate(var(--a)) translateY(-38px) scale(.4)}}
 }
+.hp-mais{display:block;width:100%;margin-top:8px;height:44px;border:1px solid var(--line);border-radius:10px;background:none;color:var(--ink);font-size:14px;font-weight:600}

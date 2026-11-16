@@ -1187,7 +1187,8 @@ function painelHist(soDet){
   /* lista + detalhe */
   info.sort((a, b) => a.st.o - b.st.o || nomeEx(a.id).localeCompare(nomeEx(b.id)));
   const sel = info.find(x => x.id === histEx) || (soDet ? null : info[0]);
-  const lista = info.map(x => { const t = letraDe(x.id), g = BIB_ID[x.id] ? GRUPOS[BIB_ID[x.id].g] : '';
+  const LIM = 6, corta = telaEstreita() && !histTodos && info.length > LIM + 1;
+  const lista = (corta ? info.slice(0, LIM) : info).map(x => { const t = letraDe(x.id), g = BIB_ID[x.id] ? GRUPOS[BIB_ID[x.id].g] : '';
     return `<button type="button" class="hp-ex ${sel && x.id === sel.id ? 'on' : ''}" data-hex="${x.id}" aria-pressed="${sel && x.id === sel.id}">
       <span class="hp-ex-n"><b>${esc(nomeEx(x.id))}</b><small>${t ? 'Treino ' + t + ' · ' : ''}${g}</small></span>
       ${sparkSvg(x.pts.slice(-12).map(p => p.v), x.st.k)}
@@ -1212,7 +1213,8 @@ function painelHist(soDet){
       <div class="hp-vezes"><p class="rot">Últimas vezes</p>${todos.slice(-5).reverse().map(p => `<div><span>${fmtData(p.d)}</span><b>${p.sets.map(z => serieTxt(sel.id, z)).join(' · ')}</b></div>`).join('')}</div>`;
   }
   const exHtml = info.length ? `<div class="hp-split ${histEx ? 'sel' : ''}">
-      <div class="card hp-lista"><p class="rot" style="margin-bottom:6px">Exercícios · os que precisam de atenção primeiro</p>${lista}</div>
+      <div class="card hp-lista"><p class="rot" style="margin-bottom:6px">Exercícios · os que precisam de atenção primeiro</p>${lista}
+        ${corta ? `<button type="button" class="hp-mais" data-htodos="1">Ver todos os ${info.length}</button>` : telaEstreita() && histTodos && info.length > LIM + 1 ? '<button type="button" class="hp-mais" data-htodos="0">Mostrar menos</button>' : ''}</div>
       <div class="card hp-det ${histEx ? '' : 'auto'}">${det}</div></div>`
     : '<div class="card"><p class="chart-vazio">Registre cargas para ver a evolução dos exercícios.</p></div>';
   if(soDet) return det ? `<div class="hp-tela">${det}</div>` : '';
@@ -1223,7 +1225,7 @@ function painelHist(soDet){
     <div class="sec"><span>Exercícios</span><span>${info.length}</span></div>${exHtml}`;
 }
 
-let histRolagem = 0;
+let histRolagem = 0, histTodos = false, histRegs = 8;
 const telaEstreita = () => matchMedia('(max-width: 899px)').matches;
 function telaHistorico(){
   const topo = cab(`${db.sessoes.length} registros`, 'Histórico');
@@ -1232,7 +1234,8 @@ function telaHistorico(){
   if(histEx && telaEstreita()){ const d = painelHist(true); if(d) return d; histEx = null; }
   const mesDe = s => { const d = new Date(s.data); return d.getFullYear() + '-' + d.getMonth(); };
   let mesAtual = null;
-  const itens = db.sessoes.slice().reverse().map(s => {
+  const totalReg = db.sessoes.length, mostra = Math.min(totalReg, histRegs);
+  const itens = db.sessoes.slice().reverse().slice(0, mostra).map(s => {
     let cabMes = '';
     if(mesDe(s) !== mesAtual){
       mesAtual = mesDe(s);
@@ -1269,13 +1272,14 @@ function telaHistorico(){
 
   return topo + painelHist() + `
     ${blocoAnalise()}
-    ${itens}`;
+    ${itens}
+    ${mostra < totalReg ? `<button type="button" class="hp-mais" data-hregs="1">Ver registros mais antigos (${totalReg - mostra})</button>` : ''}`;
 }
 
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v40 · nov/2026';
+const VERSAO = 'v41 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1666,7 +1670,7 @@ document.addEventListener('click', e => {
 document.querySelector('nav.menu').addEventListener('click', e => {
   const b = e.target.closest('button[data-aba]'); if(!b) return;
   if((aba === 'editor') && !confirm('Sair do editor sem salvar?')) return;
-  metasEditando = false; if(b.dataset.aba === 'historico') histEx = null;
+  metasEditando = false; if(b.dataset.aba === 'historico'){ histEx = null; histTodos = false; histRegs = 8; }
   aba = b.dataset.aba; ed = null; me = null; trocando = null; fichaAberta = null; edReg = null; render(); window.scrollTo(0, 0);
 });
 
@@ -1862,6 +1866,8 @@ $('#app').addEventListener('click', e => {
     else { histEx = el.dataset.hex; render(); document.querySelector('.hp-det')?.scrollIntoView({ block: 'nearest' }); }
     return;
   }
+  if(el.dataset.hregs){ histRegs += 20; render(); return; }
+  if(el.dataset.htodos){ histTodos = el.dataset.htodos === '1'; render(); if(!histTodos) document.querySelector('.hp-lista')?.scrollIntoView({ block: 'start' }); return; }
   if(el.dataset.hvoltar){ histEx = null; render(); window.scrollTo(0, telaEstreita() ? histRolagem : window.scrollY); return; }
   if(el.dataset.so){ soInstalar = el.dataset.so; render(); return; }
   if(el.dataset.step && me){
