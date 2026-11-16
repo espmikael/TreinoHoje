@@ -16,7 +16,9 @@ Caderno de treino pessoal: escolha o treino do dia, registre cargas e repetiçõ
 - **Planos** — editor de planos, gerador automático (por dias, tempo e tipo de academia) e troca de exercício só no dia, quando o aparelho está ocupado.
 - **Metas** — frequência semanal, carga-alvo e km de corrida, todas opcionais. Inclui "semana leve" para semanas de prova ou entrega.
 - **Semana e mês** — calendário, sequência de semanas na meta e séries por grupo muscular.
-- **Histórico** — força estimada por exercício e registros por mês, com previsto × feito.
+- **Histórico** — força estimada por exercício e registros por mês, com previsto × feito. Tocar num músculo mostra de quais exercícios vieram as séries, e um mapa mostra as séries por músculo semana a semana.
+- **Recordes** — o fim do treino e a tela inicial mostram os recordes da semana (melhor série em força estimada).
+- **Notas** — uma nota curta por exercício (ex.: "banco na posição 3"), que aparece na próxima vez.
 - **Análise com IA** — exporta um resumo em texto da semana ou do mês (previsto × feito, cargas, volume, corrida) pronto para colar em qualquer IA.
 - **Compartilhar** — gera uma imagem do treino no formato de story.
 - **Tema** — escuro (padrão), claro ou automático.
