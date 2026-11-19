@@ -426,6 +426,10 @@ const POSES = {
   /* ----- pernas ----- */
   agachamento: { A: { P: [100, CH], t: 4, l: [0, 0], ar: 1, a: [-50, 160], w: [['barra', 'nuca']] },
     B: { P: [102, CH], t: 42, l: [77, -31], ar: 1, a: [-50, 160], w: [['barra', 'nuca']] } },
+  /* agachamento livre visto de frente: barra nas costas, anilhas aparecendo dos dois lados */
+  agachamentoF: { v: 'f',
+    A: { a: [45, 172], barraAtras: 1, l: [10, -6], o: [['l', 20, 59, 200, 59, 5], ['r', 28, 41, 9, 36], ['r', 183, 41, 9, 36], ['r', 19, 47, 8, 24], ['r', 193, 47, 8, 24]] },
+    B: { y: 32, a: [45, 172], barraAtras: 1, l: [58, -26], cn: 40, o: [['l', 20, 91, 200, 91, 5], ['r', 28, 73, 9, 36], ['r', 183, 73, 9, 36], ['r', 19, 79, 8, 24], ['r', 193, 79, 8, 24]] } },
   agachFrente: { A: { P: [100, CH], t: 3, l: [0, 0], ar: 1, a: [32, 176], w: [['*', 'W']] },
     B: { P: [102, CH], t: 30, l: [80, -32], ar: 1, a: [32, 176], w: [['*', 'W']] } },
   legPress: { pr: [['r', 92, 198, 60, 8], ['l', 98, 196, 46, 150, 9], ['l', 124, 206, 124, 232, 5], ['l', 210, 232, 252, 120, 6]],
@@ -510,7 +514,7 @@ const FICHAS = {
   'triceps-frances':       { d: 'frances', peso: 'halter', pad: 'Isolado · extensão de cotovelo', p: ['triceps'], s: [], dicas: ['Braços acima da cabeça, cotovelos apontando para a frente.', 'Desça o peso atrás da cabeça alongando o tríceps.', 'Estenda sem abrir os cotovelos.'] },
   'triceps-testa':         { d: 'testa', peso: 'barra', pad: 'Isolado · extensão de cotovelo', p: ['triceps'], s: [], dicas: ['Braços apontando para o teto.', 'Dobre só os cotovelos, levando a barra em direção à testa.', 'Estenda sem mexer os ombros.'] },
   'mergulho':              { d: 'mergulho', peso: 'punho', pad: 'Composto · empurrar vertical', p: ['triceps'], s: ['peito', 'ombro'], dicas: ['Tronco mais ereto foca o tríceps; inclinado, o peito.', 'Desça até os cotovelos formarem ~90°.', 'Suba até estender sem travar.'] },
-  'agachamento':           { d: 'agachamento', peso: 'barra', pad: 'Composto · agachar', p: ['pernas'], s: ['gluteos'], dicas: ['Pés na largura dos ombros, pontas levemente para fora.', 'Desça empurrando o quadril para trás, joelhos na direção dos pés.', 'Suba mantendo o peito aberto e a coluna neutra.'] },
+  'agachamento':           { d: 'agachamentoF', peso: 'barra', pad: 'Composto · agachar', p: ['pernas'], s: ['gluteos'], dicas: ['Pés na largura dos ombros, pontas levemente para fora.', 'Desça empurrando o quadril para trás, joelhos na direção dos pés.', 'Suba mantendo o peito aberto e a coluna neutra.'] },
   'leg-press':             { d: 'legPress', peso: 'punho', pad: 'Composto · agachar', p: ['pernas'], s: ['gluteos'], dicas: ['Lombar apoiada o tempo todo.', 'Desça até os joelhos chegarem perto de 90° ou um pouco mais.', 'Empurre sem travar os joelhos no final.'] },
   'bulgaro':               { d: 'bulgaro', peso: 'halter', pad: 'Composto · unilateral', p: ['pernas'], s: ['gluteos'], dicas: ['Pé de trás apoiado no banco.', 'Desça na vertical até o joelho de trás quase tocar o chão.', 'Empurre pelo pé da frente.'] },
   'afundo':                { d: 'afundo', peso: 'halter', pad: 'Composto · unilateral', p: ['pernas'], s: ['gluteos'], dicas: ['Passo longo à frente, tronco ereto.', 'Desça até os dois joelhos formarem ~90°.', 'Volte empurrando pelo calcanhar da frente.'] },
