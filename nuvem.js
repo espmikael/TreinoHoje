@@ -85,7 +85,11 @@ async function nuvemCriar(email, senha){
     if(!r.ok){
       const m = msgErro(r);
       nvErro = /already|registered|exists/i.test(m) ? 'Esse e-mail já tem conta. Use "Entrar".'
-        : /429|rate/i.test(m) ? 'Muitas tentativas. Espere um pouco.' : 'Não deu pra criar a conta agora. Tente de novo em instantes.';
+        : /429|rate/i.test(m) ? 'Muitas tentativas. Espere um pouco.'
+        : /signups? not allowed|signup.*disabled|not allowed for this instance/i.test(m) ? 'O cadastro de novas contas está fechado no momento.'
+        : /sending|confirmation e-?mail|smtp/i.test(m) ? 'A conta não foi criada porque o e-mail de confirmação não saiu. Tente de novo mais tarde.'
+        : /password/i.test(m) ? 'Senha não aceita: ' + m
+        : 'Não deu pra criar a conta agora. (' + m.slice(0, 80) + ')';
       render(); return;
     }
     if(r.corpo && r.corpo.access_token){ await nuvemEntrar(email, senha); return; }
