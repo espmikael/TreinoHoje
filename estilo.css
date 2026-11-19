@@ -461,7 +461,6 @@ h1{font-size:34px;font-weight:800;line-height:1.05;letter-spacing:-.025em}
 .toggle button{font-size:13px;font-weight:600}
 .bf-info p{font-size:13px;font-weight:600}
 .field input,.ed-nums input{font-weight:600;letter-spacing:-.01em}
-.info span{font-style:italic;font-weight:700;font-size:13px;font-family:ui-serif,"New York",Georgia,serif}
 .ex-head h2{font-size:17px}
 @media (min-width:900px){ h1{font-size:44px} .foco{font-size:20px} .marca{font-size:28px} }
 
@@ -915,3 +914,8 @@ svg text.val{paint-order:stroke;stroke:var(--surface);stroke-width:5px;stroke-li
 .hm-bkp-b .lnk{flex:none;padding:0 6px}
 .hm-bkp-b .mini-btn{flex:none}
 @media (prefers-reduced-motion: reduce){.toast{transition:none}}
+
+/* rodada 25: (i) desenhado em SVG, reto e com o mesmo traço dos outros ícones */
+.info svg{display:block;width:20px;height:20px}
+/* agachamento em fundo: pés e as duas anilhas dentro do card */
+.hm-hero .hm-fig{right:-10px;bottom:-4px}

@@ -1039,7 +1039,7 @@ function telaTreino(t){
       </div>`;
     }).join('');
     return `<section class="card">
-      <div class="ex-head"><div class="nome-i"><h2>${esc(e.nome)}</h2>${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}"><span>i</span></button>` : ''}</div><span class="ex-meta">${feitas}/${e.series} · ${cardio ? `${e.reps[0]}–${e.reps[1]} min` : `${e.base}${e.extra ? '+' + e.extra : ''} × ${e.reps[0]}–${e.reps[1]}`}</span></div>
+      <div class="ex-head"><div class="nome-i"><h2>${esc(e.nome)}</h2>${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><circle cx="10" cy="10" r="8.6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="6.2" r="1.2" fill="currentColor"/><path d="M10 9.2v5.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>` : ''}</div><span class="ex-meta">${feitas}/${e.series} · ${cardio ? `${e.reps[0]}–${e.reps[1]} min` : `${e.base}${e.extra ? '+' + e.extra : ''} × ${e.reps[0]}–${e.reps[1]}`}</span></div>
       <div class="ex-sub"><p class="ultima">${ult}${e.obs ? ' · ' + esc(e.obs) : ''}</p>
         ${e.avulso ? `<button type="button" class="trocar" data-tirar="${e.orig}" aria-label="Tirar ${esc(e.nome)} do treino de hoje">Tirar</button>` : `<button type="button" class="trocar" data-trocar="${e.orig}" aria-expanded="${trocando === e.orig}">${trocando === e.orig ? 'Fechar' : (e.trocado ? 'Trocado' : 'Trocar')}</button>`}</div>
       ${e.avulso ? '' : ''}
@@ -1523,7 +1523,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v49 · nov/2026';
+const VERSAO = 'v50 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1578,7 +1578,7 @@ function telaPlano(){
   const blocos = p.rotacao.map(k => {
     const t = p.treinos[k];
     return `<div><div class="sec"><span>Treino ${k}</span><span>${esc(t.foco)}</span></div><div class="card"><ul class="plano">${
-      t.ex.map(e => `<li><span class="nome-i" style="color:inherit;font:inherit;flex:1;white-space:normal">${esc(e.nome)}${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}"><span>i</span></button>` : ''}</span><span>${ehCardio(e.id) ? `${e.reps[0]}–${e.reps[1]} min` : `${e.series} × ${e.reps[0]}–${e.reps[1]}`}</span></li>`).join('')}</ul></div></div>`;
+      t.ex.map(e => `<li><span class="nome-i" style="color:inherit;font:inherit;flex:1;white-space:normal">${esc(e.nome)}${FICHAS[e.id] ? `<button type="button" class="info" data-ficha="${e.id}" aria-label="Ver ficha de ${esc(e.nome)}"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><circle cx="10" cy="10" r="8.6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="6.2" r="1.2" fill="currentColor"/><path d="M10 9.2v5.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>` : ''}</span><span>${ehCardio(e.id) ? `${e.reps[0]}–${e.reps[1]} min` : `${e.series} × ${e.reps[0]}–${e.reps[1]}`}</span></li>`).join('')}</ul></div></div>`;
   }).join('');
   return topo + `<div class="sec"><span>Seus planos</span><span>${lista.length} ${lista.length === 1 ? 'plano' : 'planos'}</span></div>
     <div class="card">${seletor}

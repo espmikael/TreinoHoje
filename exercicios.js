@@ -305,7 +305,7 @@ function quadroFrente(T, Q, f, mus, o, vb, id, quadro){
   const S = sh([86, 66]), E = soma(S, vet(-a[0], SEG.braco)), W = soma(E, vet(-a[1], SEG.ante));
   const Sd = esp(S), Ed = soma(Sd, vet(a2[0], SEG.braco)), Wd = soma(Ed, vet(a2[1], SEG.ante));
   const Hq = sh([99, 136]), Hd = esp(Hq);
-  const cx = Q.s ? 14 : SEG.coxa;   // sentado: a coxa vem na direção de quem olha e fica curta
+  const cx = Q.cx || (Q.s ? 14 : SEG.coxa);   // sentado: a coxa vem na direção de quem olha e fica curta
   const K = soma(Hq, vet(-l[0], cx)), P = soma(K, vet(-l[1], Q.cn || SEG.canela));
   const Kd = soma(Hd, vet(l2[0], cx)), Pd = soma(Kd, vet(l2[1], Q.cn || SEG.canela));
   const J = { S, E, W, Sd, Ed, Wd, H: Hq, K, P, Kd, Pd, meio: meio(W, Wd, .5) };
@@ -428,8 +428,9 @@ const POSES = {
     B: { P: [102, CH], t: 42, l: [77, -31], ar: 1, a: [-50, 160], w: [['barra', 'nuca']] } },
   /* agachamento livre visto de frente: barra nas costas, anilhas aparecendo dos dois lados */
   agachamentoF: { v: 'f',
-    A: { a: [45, 172], barraAtras: 1, l: [10, -6], o: [['l', 20, 59, 200, 59, 5], ['r', 28, 41, 9, 36], ['r', 183, 41, 9, 36], ['r', 19, 47, 8, 24], ['r', 193, 47, 8, 24]] },
-    B: { y: 20, a: [45, 172], barraAtras: 1, l: [30, -12], cn: 44, o: [['l', 20, 79, 200, 79, 5], ['r', 28, 61, 9, 36], ['r', 183, 61, 9, 36], ['r', 19, 67, 8, 24], ['r', 193, 67, 8, 24]] } },
+    A: { a: [45, 172], barraAtras: 1, l: [10, -6], o: [['l', 4, 59, 216, 59, 6], ['r', 12, 25, 13, 68, 4], ['r', 195, 25, 13, 68, 4], ['r', 0, 35, 10, 48, 3], ['r', 210, 35, 10, 48, 3]] },
+    /* fundo: quadril desce até a linha dos joelhos, joelhos abertos para fora, canelas em pé */
+    B: { y: 22, a: [45, 172], barraAtras: 1, l: [68, 0], cx: 44, cn: 40, o: [['l', 4, 81, 216, 81, 6], ['r', 12, 47, 13, 68, 4], ['r', 195, 47, 13, 68, 4], ['r', 0, 57, 10, 48, 3], ['r', 210, 57, 10, 48, 3]] } },
   agachFrente: { A: { P: [100, CH], t: 3, l: [0, 0], ar: 1, a: [32, 176], w: [['*', 'W']] },
     B: { P: [102, CH], t: 30, l: [80, -32], ar: 1, a: [32, 176], w: [['*', 'W']] } },
   legPress: { pr: [['r', 92, 198, 60, 8], ['l', 98, 196, 46, 150, 9], ['l', 124, 206, 124, 232, 5], ['l', 210, 232, 252, 120, 6]],
