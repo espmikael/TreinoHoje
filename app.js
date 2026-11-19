@@ -104,6 +104,10 @@ function nomeEx(id){
   for(const t of Object.values(PLANO_PADRAO.treinos)){ const e = t.ex.find(x => x.id === id); if(e) return e.nome; }
   return BIB_ID[id]?.nome || id;
 }
+/* treino personalizado: tipo 'livre', fora do plano e da rotação; os exercícios ficam no rascunho (avulsos) */
+const LIVRE = 'livre';
+function treinoDe(t){ return t === LIVRE ? { foco: 'Personalizado', ex: [] } : plano().treinos[t]; }
+function nomeLivre(rd){ return (rd && rd.nome && rd.nome.trim()) || 'Treino personalizado'; }
 function tituloSessao(s){
   if(s.tipo === 'corrida') return { nome: 'Corrida', foco: 'Cardio' };
   if(s.nome) return { nome: s.nome, foco: s.foco || '' };
@@ -256,7 +260,7 @@ function limparEscolha(){ tipoSel = null; db.hoje = null; }
 function tipoAtual(){
   if(!db.hoje || db.hoje.dia !== diaISO()){ tipoSel = null; db.hoje = null; }
   const rot = rotacao();
-  return (tipoSel && (tipoSel === 'corrida' || rot.includes(tipoSel))) ? tipoSel : null;
+  return (tipoSel && (tipoSel === 'corrida' || tipoSel === LIVRE || rot.includes(tipoSel))) ? tipoSel : null;
 }
 function quandoFoi(k){
   const p = plano();
@@ -412,7 +416,7 @@ function emAndamento(){
     const r = db.rascunhos.corrida;
     return r && (r.km || r.min) ? { t, corrida: true } : null;
   }
-  if(!rotacao().includes(t)) return null;
+  if(t !== LIVRE && !rotacao().includes(t)) return null;
   const rd = db.rascunhos[rascKey(t)];
   if(!rd || !rd.ex || rascunhoVencido(rd)) return null;
   const lista = montarDia(plano(), t, rd);
@@ -459,7 +463,7 @@ function cardMetas(){
   const hoje = diaISO(); let dias = '';
   for(let i = 0; i < 7; i++){
     const d = new Date(ini); d.setDate(d.getDate() + i); const k = diaISO(d), t = porDia[k];
-    dias += `<span class="hm-dia${t ? ' f' : ''}${k === hoje ? ' hoje' : ''}"><i${t ? ` style="background:${tomDe(t)[0]}"` : ''}>${t ? (t === 'corrida' ? '' : esc(t)) : ''}</i><small>${['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'][i]}</small></span>`;
+    dias += `<span class="hm-dia${t ? ' f' : ''}${k === hoje ? ' hoje' : ''}"><i${t ? ` style="background:${tomDe(t)[0]}"` : ''}>${t ? (t === 'corrida' ? '' : t === LIVRE ? '+' : esc(t)) : ''}</i><small>${['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'][i]}</small></span>`;
   }
   const falta = Math.max(0, ma - g) + Math.max(0, mc - c);
   const idx = (new Date().getDay() + 6) % 7, restam = 7 - idx;
@@ -481,7 +485,7 @@ function cardsRodape(){
       const prev = ult.previsto ? Object.values(ult.previsto).reduce((x, v) => x + (v.series || 0), 0) : 0;
       sub = prev ? `${feitas}/${prev} séries` : `${feitas} séries`;
     }
-    a = `<button type="button" class="card hm-mini" data-ir="historico"><p class="rot">Último treino</p><p class="hm-mt">${ult.tipo === 'corrida' ? 'Corrida' : esc(ult.tipo)} · ${quando}</p><p class="cs">${sub}</p></button>`;
+    a = `<button type="button" class="card hm-mini" data-ir="historico"><p class="rot">Último treino</p><p class="hm-mt">${ult.tipo === 'corrida' ? 'Corrida' : ult.tipo === LIVRE ? esc(tituloSessao(ult).nome) : esc(ult.tipo)} · ${quando}</p><p class="cs">${sub}</p></button>`;
   }
   let b = '';
   const ids = [...new Set(Object.values(plano().treinos).flatMap(t => t.ex.map(e => e.id)))];
@@ -533,14 +537,15 @@ function avisoInstalar(){
     <div class="hm-inst-b"><button type="button" class="mini-btn" data-acao="como-instalar">Mostrar como</button><button type="button" class="lnk lnk-mini" data-acao="fechar-instalar">Depois</button></div></section>`;
 }
 /* cada treino tem um tom da paleta do app (ordem da rotação); corrida é âmbar */
-const TONS = [['#c24a37', '#8e2f22'], ['#7d8c47', '#4f5b2a'], ['#557c88', '#30505a'], ['#8a5876', '#5a344e'], ['#5c5953', '#34322e']];
+const TONS = [['#c24a37', '#8e2f22'], ['#7d8c47', '#4f5b2a'], ['#557c88', '#30505a'], ['#8a5876', '#5a344e'], ['#6d7a5a', '#46503a']];
 function tomDe(k){
   if(k === 'corrida') return ['#d39a45', '#9c6519'];
+  if(k === LIVRE) return ['#5c5953', '#34322e'];
   const i = rotacao().indexOf(k); return TONS[(i < 0 ? 0 : i) % TONS.length];
 }
 const estiloTom = k => { const [a, b] = tomDe(k); return `--t1:${a};--t2:${b}`; };
 function figuraTreino(k){
-  if(k === 'corrida') return '';
+  if(k === 'corrida' || k === LIVRE) return '';
   const ex = (plano().treinos[k]?.ex || []).find(e => !ehCardio(e.id) && POSES && FICHAS[e.id]);
   return ex ? `<div class="hm-fig" aria-hidden="true">${desenhoPose(ex.id, 'B')}</div>` : '';
 }
@@ -680,6 +685,63 @@ function avisoPausaRotulo(){
   const sem = diasEntre(ult.data, new Date()); return sem >= 3 ? ` · ${sem} dias sem treinar` : '';
 }
 
+let maisAberto = false;
+function folhaMais(){
+  const ult = (db.livres || [])[0];
+  return `<div class="folha-fundo" data-fundo="mais"><section class="folha mais-f" role="dialog" aria-modal="true" aria-label="Outras opções de treino">
+    <div class="folha-alca" aria-hidden="true"></div>
+    <button type="button" class="mais-op" data-acao="livre-montar"><span class="mais-ic">+</span><span><b>Treino personalizado</b><small>${ult ? `${esc(ult.nome)} · último em ${fmtData(new Date(ult.em))}` : 'monte com qualquer exercício'}</small></span><i>›</i></button>
+    <button type="button" class="mais-op" data-acao="retro-abrir"><span class="mais-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span><span><b>Treino de outro dia</b><small>A, B, C ou corrida em uma data passada</small></span><i>›</i></button>
+  </section></div>`;
+}
+/* montar o treino personalizado */
+let mont = null;                 // { nome, lista: [{ id, series }] }
+let montBusca = '', montFiltro = 'tudo';
+const CORPO_IDS = ['barra-fixa', 'barra-supinada', 'mergulho', 'triceps-banco', 'elevacao-pernas', 'elevacao-pernas-paralela', 'remada-invertida', 'flexao', 'flexao-inclinada', 'flexao-diamante', 'afundo', 'afundo-reverso', 'passada', 'bulgaro', 'step-up', 'ponte-gluteo', 'agachamento-goblet', 'pular-corda', 'superman'];
+const MONT_FILTROS = [['tudo', 'Tudo'], ['corpo', 'Peso do corpo'], ['halter', 'Halteres'], ['barra', 'Barra'], ['cardio', 'Cardio']];
+function filtroOk(b){
+  const pz = FICHAS[b.id]?.peso;
+  if(montFiltro === 'tudo') return true;
+  if(montFiltro === 'cardio') return b.g === 'cardio';
+  if(montFiltro === 'corpo') return b.g !== 'cardio' && (CORPO_IDS.includes(b.id) || !pz) || b.id === 'pular-corda';
+  return pz === montFiltro;
+}
+function montResultados(){
+  const ja = new Set(mont.lista.map(x => x.id));
+  const base = montBusca.trim() ? buscarBib(montBusca, []) : BIB;
+  const itens = base.filter(filtroOk).slice(0, 30);
+  if(!itens.length) return '<p class="cs" style="padding:12px 0">Nada encontrado.</p>';
+  return itens.map(b => `<button type="button" class="mt-res${ja.has(b.id) ? ' on' : ''}" data-mont-add="${b.id}" aria-pressed="${ja.has(b.id)}"><span><b>${esc(b.nome)}</b><small>${GRUPOS[b.g] || b.g}</small></span><i aria-hidden="true">${ja.has(b.id) ? '✓' : '+'}</i></button>`).join('');
+}
+function telaMontar(){
+  if(!mont) mont = { nome: '', lista: [] };
+  const recentes = (db.livres || []).filter(l => l.nome !== mont.nome || !mont.lista.length);
+  const sel = mont.lista.map((x, i) => { const b = BIB_ID[x.id]; if(!b) return '';
+    return `<div class="mt-sel"><span class="mt-n"><b>${esc(b.nome)}</b><small>${x.series} ${b.g === 'cardio' ? plural(x.series, 'rodada', 'rodadas') : plural(x.series, 'série', 'séries')}</small></span>
+      <button type="button" class="mt-b" data-mont-ser="${i}" data-d="-1" aria-label="Menos uma série"${x.series <= 1 ? ' disabled' : ''}>−</button><b class="mt-c">${x.series}</b>
+      <button type="button" class="mt-b" data-mont-ser="${i}" data-d="1" aria-label="Mais uma série"${x.series >= 10 ? ' disabled' : ''}>+</button>
+      <button type="button" class="mt-x" data-mont-tirar="${i}" aria-label="Tirar ${esc(b.nome)}">${IC.x}</button></div>`; }).join('');
+  return `<div class="mt-topo"><button type="button" class="lnk" data-acao="mont-cancelar">Cancelar</button><span>Treino personalizado</span><span></span></div>
+    <input class="mt-nome" id="mont-nome" type="text" maxlength="30" placeholder="Nome (ex.: Praia)" value="${esc(mont.nome)}" aria-label="Nome do treino" autocomplete="off">
+    ${!mont.lista.length && recentes.length ? `<div class="sec"><span>Recentes</span></div><div class="mt-rec">${recentes.map((l, i) => `<button type="button" class="chip" data-mont-rec="${i}">${esc(l.nome)} · ${l.lista.length}</button>`).join('')}</div>` : ''}
+    ${mont.lista.length ? `<section class="card mt-lista"><p class="rot">No treino · ${mont.lista.length}</p>${sel}</section>` : ''}
+    <label class="busca mt-busca">${ICON_LUPA}<input type="search" placeholder="Buscar exercício" data-busca="mont" value="${esc(montBusca)}" aria-label="Buscar exercício" autocomplete="off"></label>
+    <div class="mt-filtros" role="group" aria-label="Filtrar">${MONT_FILTROS.map(([k, n]) => `<button type="button" class="${montFiltro === k ? 'on' : ''}" data-mont-filtro="${k}" aria-pressed="${montFiltro === k}">${n}</button>`).join('')}</div>
+    <div id="mont-res" class="mt-resultados">${montResultados()}</div>
+    <div class="mt-rodape"><button type="button" class="btn" data-acao="mont-comecar"${mont.lista.length ? '' : ' disabled'}>${mont.lista.length ? `Começar · ${mont.lista.length} ${plural(mont.lista.length, 'exercício', 'exercícios')}` : 'Escolha os exercícios'}</button></div>`;
+}
+function montarComecar(){
+  const rk = rascKey(LIVRE); const velho = db.rascunhos[rk];
+  const rd = velho && !rascunhoVencido(velho) ? velho : { ex: {}, trocas: {}, criado: Date.now() };
+  rd.nome = mont.nome.trim(); rd.avulsos = mont.lista.map(x => x.id); rd.extras = {};
+  mont.lista.forEach(x => { rd.extras[x.id] = x.series - exDaBib(x.id).series; });
+  db.rascunhos[rk] = rd;
+  /* guarda a montagem para reusar (as 6 mais recentes, uma por nome) */
+  const nome = nomeLivre(rd);
+  db.livres = [{ nome, lista: mont.lista.map(x => ({ ...x })), em: Date.now() }, ...(db.livres || []).filter(l => l.nome !== nome)].slice(0, 6);
+  escolherTipo(LIVRE, retroAberto && retroData ? retroData : null);
+  mont = null; montBusca = ''; montFiltro = 'tudo'; aba = 'hoje'; save(); render(); window.scrollTo(0, 0);
+}
 function telaHome(){
   if(!db.configurado) return telaBoasVindas();
   const rot = rotacao();
@@ -693,7 +755,7 @@ function telaHome(){
     const agora = and.atual ? `<p class="hm-h-info">Agora: <b>${esc(and.atual.e.nome)}</b> · ${and.atual.n}ª série${and.atual.ult ? '<br>Última: ' + serieTxt(and.atual.e.id, and.atual.ult) : ''}</p>` : '';
     principal = `<section class="hm-hero" style="${estiloTom(and.t)}">${figuraTreino(and.t)}<div class="hm-h-txt">
       <p class="hm-h-rot">Em andamento</p>
-      <h1 class="hm-h-tit">${and.corrida ? 'Corrida' : 'Treino ' + esc(and.t)}</h1>
+      <h1 class="hm-h-tit">${and.corrida ? 'Corrida' : and.t === LIVRE ? esc(nomeLivre(db.rascunhos[rascKey(LIVRE)])) : 'Treino ' + esc(and.t)}</h1>
       ${and.corrida ? '' : `<p class="hm-h-foco">${and.exFeitos} de ${and.nEx} exercícios · ${and.feitas}/${and.total} séries</p>
       <div class="hm-h-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Séries feitas"><i style="width:${pct}%"></i></div>`}
       ${agora}</div>
@@ -704,7 +766,7 @@ function telaHome(){
     const tr = plano().treinos[prox];
     const outros = [...rot.filter(k => k !== prox), 'corrida'];
     const chips = outros.map(k => `<button type="button" class="hm-chip" data-tipo="${k}" data-home="1"><i style="background:${tomDe(k)[0]}"></i>${k === 'corrida' ? 'Corrida' : k}</button>`).join('') +
-      `<button type="button" class="hm-chip${retroAberto ? ' on' : ''}" data-acao="${retroAberto ? 'retro-fechar' : 'retro-abrir'}" aria-expanded="${retroAberto}">Outro dia</button>`;
+      `<button type="button" class="hm-chip hm-mais${retroAberto ? ' on' : ''}" data-acao="mais" aria-label="Treino personalizado ou de outro dia" aria-haspopup="dialog">${IC.mais || '+'}</button>`;
     const rotulo = outroDia ? 'Lançar treino de ' + fmtDia(retroData) : feitoHoje ? 'Treino de hoje feito ✓ · próximo' : !db.sessoes.length ? 'Primeiro treino' : hojeTxt + avisoPausaRotulo();
     const q = quandoFoi(prox);
     principal = `<section class="hm-hero${feitoHoje && !outroDia ? ' feito' : ''}" style="${estiloTom(prox)}">${figuraTreino(prox)}<div class="hm-h-txt">
@@ -716,9 +778,10 @@ function telaHome(){
       <div class="hm-chips">${chips}</div>
       ${retroAberto ? `<div class="card retro-box hm-retro"><label class="lb" for="retro-data">Data do treino</label>
         <input class="inp" type="date" id="retro-data" data-retro="1" value="${esc(retroData)}" min="${limiteRetro()}" max="${diaISO()}">
-        <p class="cs" style="margin-top:6px">${outroDia ? `Toque no treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p></div>` : ''}`;
+        <p class="cs" style="margin-top:6px">${outroDia ? `Toque no treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p>
+        <div class="acoes"><button type="button" class="lnk lnk-mini" data-acao="retro-fechar">Cancelar</button></div></div>` : ''}`;
   }
-  return topo + principal + avisosHome() + lembreteBackup() + guiaPrimeiro() + cardMetas() + avisoInstalar() + cardsRodape();
+  return topo + principal + (maisAberto ? folhaMais() : '') + avisosHome() + lembreteBackup() + guiaPrimeiro() + cardMetas() + avisoInstalar() + cardsRodape();
 }
 
 function telaHoje(){
@@ -726,6 +789,7 @@ function telaHoje(){
   const t = tipoAtual();
   const keys = [...rot, 'corrida'];
   const topo = bannerSalvo();
+  const tt = tipoAtual(); if(tt === LIVRE) keys.push(LIVRE);
   if(!t){
     const opcoes = keys.map(k => {
       const foco = k === 'corrida' ? 'Cardio' : plano().treinos[k].foco;
@@ -745,7 +809,7 @@ function telaHoje(){
       `<div class="sec"><span>${outroDia ? 'Escolha o do dia ' + fmtDia(retroData) : 'Escolha o de hoje'}</span><span>${esc(plano().nome)}</span></div><div class="escolhas">${opcoes}</div>` + retroBox;
   }
   const seg = keys.map(k =>
-    `<button type="button" role="tab" aria-selected="${k === t}" data-tipo="${k}" class="${k === t ? 'on' : ''}">${k === 'corrida' ? 'Corrida' : k}</button>`
+    `<button type="button" role="tab" aria-selected="${k === t}" data-tipo="${k}" class="${k === t ? 'on' : ''}">${k === 'corrida' ? 'Corrida' : k === LIVRE ? 'Personalizado' : k}</button>`
   ).join('');
   const rt = dataRetro();
   let cont = '';
@@ -756,8 +820,8 @@ function telaHoje(){
   }
   const banda = `<section class="tr-banda" style="${estiloTom(t)}">
     <div class="tr-pilulas" role="tablist" aria-label="Treino">${seg}</div>
-    <div class="tr-cab"><div><p class="tr-rot">${rt ? `Lançando em ${fmtDia(rt)} · <button type="button" class="lnk lnk-mini" data-acao="retro-hoje">usar hoje</button>` : t === 'corrida' ? 'Cardio' : 'Treino de hoje'}</p>
-      <h1>${t === 'corrida' ? 'Corrida' : 'Treino ' + esc(t)}</h1><p class="tr-foco">${t === 'corrida' ? 'Ritmo confortável' : esc(plano().treinos[t].foco || '')}</p></div>${cont}</div></section>`;
+    <div class="tr-cab"><div><p class="tr-rot">${rt ? `Lançando em ${fmtDia(rt)} · <button type="button" class="lnk lnk-mini" data-acao="retro-hoje">usar hoje</button>` : t === 'corrida' ? 'Cardio' : t === LIVRE ? 'Personalizado' : 'Treino de hoje'}</p>
+      <h1>${t === 'corrida' ? 'Corrida' : t === LIVRE ? `<input class="tr-nome" id="livre-nome" type="text" maxlength="30" value="${esc(db.rascunhos[rascKey(LIVRE)]?.nome || '')}" placeholder="Treino personalizado" aria-label="Nome do treino">` : 'Treino ' + esc(t)}</h1><p class="tr-foco">${t === 'corrida' ? 'Ritmo confortável' : t === LIVRE ? 'fora do plano' : esc(plano().treinos[t].foco || '')}</p></div>${cont}</div></section>`;
   return topo + banda + (t === 'corrida' ? telaCorrida() : telaTreino(t));
 }
 
@@ -784,9 +848,9 @@ function salvarEsquecidos(){
     delete db.rascunhos[rk];
     if(!Object.keys(ex).length) continue;
     const i = rk.lastIndexOf(':'); const pid = rk.slice(0, i), t = rk.slice(i + 1);
-    const tr = db.planos[pid]?.treinos?.[t];
+    const tr = t === LIVRE ? { foco: 'Personalizado' } : db.planos[pid]?.treinos?.[t];
     const previsto = tr ? previstoDe(montarDia(db.planos[pid], t, rd)) : null;
-    db.sessoes.push({ id: Date.now() + n, data: (rd.dataReg ? dataDeISO(rd.dataReg) : new Date(rd.editado || rd.criado)).toISOString(), tipo: t, planoId: pid, nome: 'Treino ' + t, foco: tr ? tr.foco : '', ex, ...(previsto ? { previsto } : {}), auto: true });
+    db.sessoes.push({ id: Date.now() + n, data: (rd.dataReg ? dataDeISO(rd.dataReg) : new Date(rd.editado || rd.criado)).toISOString(), tipo: t, planoId: pid, nome: t === LIVRE ? nomeLivre(rd) : 'Treino ' + t, foco: tr ? tr.foco : '', ex, ...(previsto ? { previsto } : {}), auto: true });
     n++;
   }
   if(n){ ordenarSessoes(); save(); }
@@ -807,7 +871,7 @@ function rascunho(t){
 /* exercícios do treino com as trocas e séries extras do dia aplicadas (o plano não muda) */
 function exerciciosDoDia(t){ return montarDia(plano(), t, rascunho(t)); }
 function montarDia(pl, t, rd){
-  const tr = pl && pl.treinos && pl.treinos[t]; if(!tr) return [];
+  const tr = t === LIVRE ? { ex: [] } : pl && pl.treinos && pl.treinos[t]; if(!tr) return [];
   rd = { trocas: {}, extras: {}, avulsos: [], ...rd };
   return tr.ex.map(e => {
     const extra = rd.extras[e.id] || 0;
@@ -912,7 +976,7 @@ function alternativas(e, lista){
 }
 
 function telaTreino(t){
-  const p = plano().treinos[t];
+  const p = treinoDe(t);
   const rd = rascunho(t);
   const lista = exerciciosDoDia(t);
   const totalSeries = lista.reduce((a, e) => a + e.series, 0);
@@ -978,7 +1042,7 @@ function telaTreino(t){
     ${addHoje ? `<section class="card add-painel"><div class="troca" style="margin-top:0"><p class="troca-t">Adicionar exercício</p>
         <label class="busca">${ICON_LUPA}<input type="search" placeholder="Buscar pelo nome" data-busca="hoje" value="${esc(buscaTxt)}" aria-label="Buscar exercício para adicionar" autocomplete="off"></label>
         <div class="chips" id="hoje-res">${resultadosHoje(t, buscaTxt)}</div></div>
-        <div class="add-rodape"><button type="button" class="chip chip-mini ${addPlano ? 'on' : ''}" aria-pressed="${addPlano}" data-acao="add-plano">${addPlano ? '✓ ' : ''}Salvar no plano</button>
+        <div class="add-rodape">${t === LIVRE ? '<span></span>' : `<button type="button" class="chip chip-mini ${addPlano ? 'on' : ''}" aria-pressed="${addPlano}" data-acao="add-plano">${addPlano ? '✓ ' : ''}Salvar no plano</button>`}
           <button type="button" class="lnk lnk-mini" data-acao="add-hoje">Fechar</button></div></section>`
       : `<button type="button" class="add-ex-btn" data-acao="add-hoje" aria-label="Adicionar exercício ao treino">+</button>`}
     <div class="barra-fixa">${barraProgresso(t)}<button type="button" class="btn-fixo" data-acao="concluir" data-t="${t}">Concluir</button></div>`;
@@ -1445,7 +1509,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v46 · nov/2026';
+const VERSAO = 'v47 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1799,7 +1863,7 @@ document.getElementById('nv-ic')?.addEventListener('click', () => {
 addEventListener('online', () => atualizarNuvemIcone()); addEventListener('offline', () => atualizarNuvemIcone());
 function render(){
   atualizarNuvemIcone();
-  const telas = { inicio: telaHome, hoje: telaHoje, historico: telaHistorico, plano: telaPlano, editor: telaEditor, gerador: telaGerador, metas: telaMetas };
+  const telas = { inicio: telaHome, hoje: telaHoje, montar: telaMontar, historico: telaHistorico, plano: telaPlano, editor: telaEditor, gerador: telaGerador, metas: telaMetas };
   let html = telas[aba]() + (fichaAberta ? folhaFicha(fichaAberta) : '');
   if(concluido && !html.includes('folha-fundo')) html += folhaConcluido(concluido);
   if(instalarAberto && !html.includes('folha-fundo')) html += folhaInstalar(true);
@@ -1807,7 +1871,7 @@ function render(){
   /* na aba Treino, o topo do app pega a cor do treino do dia (no celular) */
   const tb = aba === 'hoje' && tipoAtual(); document.body.classList.toggle('banda', !!tb);
   if(tb){ const [a1, a2] = tomDe(tb); document.body.style.setProperty('--t1', a1); document.body.style.setProperty('--t2', a2); }
-  const navAba = (aba === 'editor' || aba === 'gerador' || aba === 'metas') ? 'plano' : aba;
+  const navAba = (aba === 'editor' || aba === 'gerador' || aba === 'metas') ? 'plano' : aba === 'montar' ? 'inicio' : aba;
   document.querySelectorAll('nav.menu button').forEach(b => {
     const on = b.dataset.aba === navAba;
     b.classList.toggle('on', on);
@@ -1842,7 +1906,7 @@ document.addEventListener('click', e => {
 document.querySelector('nav.menu').addEventListener('click', e => {
   const b = e.target.closest('button[data-aba]'); if(!b) return;
   if((aba === 'editor') && !confirm('Sair do editor sem salvar?')) return;
-  metasEditando = false; if(b.dataset.aba === 'historico'){ histEx = null; histTodos = false; histRegs = 8; }
+  metasEditando = false; maisAberto = false; if(aba === 'montar') mont = null; if(b.dataset.aba === 'historico'){ histEx = null; histTodos = false; histRegs = 8; }
   aba = b.dataset.aba; ed = null; me = null; trocando = null; fichaAberta = null; edReg = null; render(); window.scrollTo(0, 0);
 });
 
@@ -1871,6 +1935,12 @@ $('#app').addEventListener('input', e => {
     buscaTxt = el.value;
     const lista = exerciciosDoDia(tipoAtual()); const e = lista.find(x => x.orig === el.dataset.orig);
     const box = $('#troca-res'); if(box && e) box.innerHTML = resultadosTroca(e, lista, buscaTxt);
+  } else if(el.dataset.busca === 'mont' && mont){
+    montBusca = el.value; const box = $('#mont-res'); if(box) box.innerHTML = montResultados();
+  } else if(el.id === 'mont-nome' && mont){
+    mont.nome = el.value;
+  } else if(el.id === 'livre-nome'){
+    const rd = db.rascunhos[rascKey(LIVRE)]; if(rd){ rd.nome = el.value; rd.editado = Date.now(); save(); }
   } else if(el.dataset.busca === 'hoje'){
     buscaTxt = el.value;
     const box = $('#hoje-res'); if(box) box.innerHTML = resultadosHoje(tipoAtual(), buscaTxt);
@@ -1950,6 +2020,16 @@ $('#app').addEventListener('click', e => {
     const ks = Object.keys(db.avisosOcultos); if(ks.length > 60) ks.slice(0, ks.length - 60).forEach(k => delete db.avisosOcultos[k]);
     save(); render(); return;
   }
+  if(el.dataset.montAdd && mont){
+    const id = el.dataset.montAdd, i = mont.lista.findIndex(x => x.id === id);
+    if(i >= 0) mont.lista.splice(i, 1); else mont.lista.push({ id, series: exDaBib(id).series === 1 ? 3 : exDaBib(id).series });
+    render(); return;
+  }
+  if(el.dataset.montSer && mont){ const x = mont.lista[+el.dataset.montSer]; x.series = Math.max(1, Math.min(10, x.series + +el.dataset.d)); render(); return; }
+  if(el.dataset.montTirar && mont){ mont.lista.splice(+el.dataset.montTirar, 1); render(); return; }
+  if(el.dataset.montFiltro && mont){ montFiltro = el.dataset.montFiltro; const box = $('#mont-res'); if(box) box.innerHTML = montResultados();
+    document.querySelectorAll('[data-mont-filtro]').forEach(b => { const on = b.dataset.montFiltro === montFiltro; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); return; }
+  if(el.dataset.montRec && mont){ const l = (db.livres || []).filter(l => l.nome !== mont.nome || !mont.lista.length)[+el.dataset.montRec]; if(l){ mont.nome = l.nome; mont.lista = l.lista.map(x => ({ ...x })); } render(); return; }
   if(el.dataset.bv){ bvEscolha = el.dataset.bv; render(); return; }
   if(el.dataset.meta){
     const k = el.dataset.meta; db.metas[k] = Math.max(0, Math.min(7, (db.metas[k] || 0) + Number(el.dataset.delta)));
@@ -1995,7 +2075,7 @@ $('#app').addEventListener('click', e => {
       rd.avulsos = rd.avulsos.filter(x => x !== id);
     } else if(!rd.avulsos.includes(id)) rd.avulsos.push(id);
     abertos.add(id); addHoje = false; buscaTxt = '';
-    save(); render(); toast(addPlano ? `Adicionado ao Treino ${t}` : 'Adicionado só hoje'); addPlano = false; return;
+    save(); render(); toast(addPlano ? `Adicionado ao Treino ${t}` : t === LIVRE ? 'Adicionado' : 'Adicionado só hoje'); addPlano = false; return;
   }
   if(el.dataset.tirar){
     const rd = rascunho(tipoAtual()); const id = el.dataset.tirar;
@@ -2104,7 +2184,7 @@ $('#app').addEventListener('click', e => {
     if(!Object.keys(ex).length){ toast('Preencha ao menos uma série'); return; }
     const id = Date.now(); const rt = dataRetro();
     const previstoDia = previstoDe(listaDia);
-    db.sessoes.push({ id, data: (rt ? dataDeISO(rt) : new Date()).toISOString(), tipo: t, planoId: db.planoAtivo, nome: 'Treino ' + t, foco: plano().treinos[t].foco, ex, previsto: previstoDia });
+    db.sessoes.push({ id, data: (rt ? dataDeISO(rt) : new Date()).toISOString(), tipo: t, planoId: db.planoAtivo, nome: t === LIVRE ? nomeLivre(rd) : 'Treino ' + t, foco: treinoDe(t).foco, ex, previsto: previstoDia });
     concAnim = Object.entries(previstoDia).every(([k, p]) => (ex[k] || []).length >= p.series);
     ordenarSessoes();
     db.desfazer = { id, rk: rascKey(t), rascunho: clone(rd), tipo: t, retro: rt, em: Date.now() };
@@ -2141,7 +2221,16 @@ $('#app').addEventListener('click', e => {
   if(acao === 'ver-hist'){ aba = 'historico'; histEx = null; render(); window.scrollTo(0, 0); return; }
   if(acao === 'metas-editar'){ metasEditando = true; render(); return; }
   if(acao === 'metas-pronto'){ metasEditando = false; render(); return; }
-  if(acao === 'retro-abrir'){ retroAberto = true; retroData = ''; render(); setTimeout(() => $('#retro-data')?.focus(), 0); return; }
+  if(acao === 'mais'){ maisAberto = true; render(); return; }
+  if(acao === 'livre-montar'){
+    maisAberto = false; montBusca = ''; montFiltro = 'tudo';
+    const rd = db.rascunhos[rascKey(LIVRE)];
+    mont = rd && !rascunhoVencido(rd) && rd.avulsos?.length ? { nome: rd.nome || '', lista: rd.avulsos.map(id => ({ id, series: exDaBib(id).series + (rd.extras?.[id] || 0) })) } : { nome: '', lista: [] };
+    aba = 'montar'; render(); window.scrollTo(0, 0); return;
+  }
+  if(acao === 'mont-cancelar'){ mont = null; aba = 'inicio'; render(); window.scrollTo(0, 0); return; }
+  if(acao === 'mont-comecar'){ if(mont && mont.lista.length) montarComecar(); return; }
+  if(acao === 'retro-abrir'){ maisAberto = false; aba = 'inicio'; retroAberto = true; retroData = ''; render(); setTimeout(() => $('#retro-data')?.focus(), 0); return; }
   if(acao === 'retro-fechar'){ retroAberto = false; retroData = ''; render(); return; }
   if(acao === 'analise'){ analiseAberta = !analiseAberta; render(); return; }
   if(acao === 'add-plano'){ addPlano = !addPlano; render(); return; }
@@ -2179,7 +2268,7 @@ document.addEventListener('keydown', e => {
   if(e.key !== 'Escape') return;
   if(fichaAberta){ fichaAberta = null; render(); } else if(concluido){ concluido = null; render(); }
 });
-$('#app').addEventListener('click', e => { if(e.target.dataset && e.target.dataset.fundo === 'concluido'){ concluido = null; render(); } });
+$('#app').addEventListener('click', e => { if(e.target.dataset && e.target.dataset.fundo === 'concluido'){ concluido = null; render(); } if(e.target.dataset && e.target.dataset.fundo === 'mais'){ maisAberto = false; render(); } });
 
 /* atualiza a data ao voltar para o app num outro dia */
 let escondidoEm = 0;
