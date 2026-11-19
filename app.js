@@ -450,21 +450,23 @@ function cardMetas(){
   if(!temMetaSemanal()) return m.ocultarConvite ? '' : metasInline();
   const ini = segunda(new Date()); const { g, c } = contaSemana(ini);
   const ma = metaAcad(ini), mc = m.corrida;
-  const barra = (nome, f, tot, cls) => tot ? `<div class="hm-meta"><span class="hm-mn">${nome}</span><span class="hm-seg ${cls}" aria-hidden="true">${Array.from({ length: tot }, (_, i) => `<i class="${i < f ? 'on' : ''}"></i>`).join('')}</span><b>${Math.min(f, tot)}/${tot}</b></div>` : '';
-  /* dias da semana: verde = academia, âmbar = corrida, contorno = hoje */
+  const anel = (f, t, cls, nome) => { if(!t) return ''; const r = 31, c = 2 * Math.PI * r, v = Math.min(f, t);
+    return `<div class="hm-anel ${cls}"><div><svg viewBox="0 0 74 74" aria-hidden="true"><circle cx="37" cy="37" r="${r}"/><circle class="v" cx="37" cy="37" r="${r}" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - v / t)).toFixed(1)}"/></svg>
+      <b>${f}<span>/${t}</span></b></div><small>${nome}</small></div>`; };
+  /* dias: cor e letra do treino feito; corrida em âmbar; contorno = hoje */
   const porDia = {};
-  db.sessoes.forEach(s => { const k = diaISO(new Date(s.data)); if(s.tipo === 'corrida'){ if(!porDia[k]) porDia[k] = 'c'; } else porDia[k] = 'g'; });
+  db.sessoes.forEach(s => { const k = diaISO(new Date(s.data)); if(s.tipo === 'corrida'){ if(!porDia[k]) porDia[k] = 'corrida'; } else porDia[k] = s.tipo; });
   const hoje = diaISO(); let dias = '';
   for(let i = 0; i < 7; i++){
-    const d = new Date(ini); d.setDate(d.getDate() + i); const k = diaISO(d);
-    dias += `<span class="hm-dia${porDia[k] ? ' ' + porDia[k] : ''}${k === hoje ? ' hoje' : ''}"><i></i><small>${['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'][i]}</small></span>`;
+    const d = new Date(ini); d.setDate(d.getDate() + i); const k = diaISO(d), t = porDia[k];
+    dias += `<span class="hm-dia${t ? ' f' : ''}${k === hoje ? ' hoje' : ''}"><i${t ? ` style="background:${tomDe(t)[0]}"` : ''}>${t ? (t === 'corrida' ? '' : esc(t)) : ''}</i><small>${['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'][i]}</small></span>`;
   }
   const falta = Math.max(0, ma - g) + Math.max(0, mc - c);
   const idx = (new Date().getDay() + 6) % 7, restam = 7 - idx;
-  const nota = !falta ? 'Meta da semana batida ✓' : falta > restam ? `Apertado: faltam ${falta} em ${restam} ${restam === 1 ? 'dia' : 'dias'}` : `No ritmo · faltam ${falta} em ${restam} ${restam === 1 ? 'dia' : 'dias'}`;
-  return `<section class="card hm-metas" aria-label="Metas da semana"><div class="hm-topo"><p class="rot">Metas da semana</p><button type="button" class="lnk lnk-mini" data-acao="metas-editar">editar</button></div>
-    ${barra('Academia', g, ma, 'g')}${barra('Corrida', c, mc, 'c')}
-    <div class="hm-dias" aria-hidden="true">${dias}</div><p class="cs hm-nota">${nota}</p></section>`;
+  const [tit, sub] = !falta ? ['Meta batida ✓', 'semana fechada'] : falta > restam ? ['Apertado', `faltam ${falta} em ${restam} ${restam === 1 ? 'dia' : 'dias'}`] : ['No ritmo', `${plural(falta, 'falta', 'faltam')} ${falta} ${plural(falta, 'treino', 'treinos')} em ${restam} ${restam === 1 ? 'dia' : 'dias'}`];
+  return `<section class="card hm-metas" aria-label="Metas da semana"><div class="hm-topo"><p class="rot">Sua semana</p><button type="button" class="lnk lnk-mini" data-acao="metas-editar">editar</button></div>
+    <div class="hm-aneis">${anel(g, ma, 'g', 'academia')}${anel(c, mc, 'c', 'corrida')}<div class="hm-ritmo"><b>${tit}</b><span>${sub}</span></div></div>
+    <div class="hm-dias" aria-hidden="true">${dias}</div></section>`;
 }
 function cardsRodape(){
   const ult = db.sessoes[db.sessoes.length - 1];
@@ -530,46 +532,58 @@ function avisoInstalar(){
     <p class="cs">No navegador, o celular pode apagar dados de sites pouco usados. Instalado, isso não acontece.</p>
     <div class="hm-inst-b"><button type="button" class="mini-btn" data-acao="como-instalar">Mostrar como</button><button type="button" class="lnk lnk-mini" data-acao="fechar-instalar">Depois</button></div></section>`;
 }
+/* cada treino tem um tom da paleta do app (ordem da rotação); corrida é âmbar */
+const TONS = [['#c24a37', '#8e2f22'], ['#7d8c47', '#4f5b2a'], ['#c08a2c', '#8a5c14'], ['#5f7f8c', '#3d5560'], ['#8a5a7a', '#5e3a54']];
+function tomDe(k){
+  if(k === 'corrida') return ['#d39a45', '#9c6519'];
+  const i = rotacao().indexOf(k); return TONS[(i < 0 ? 0 : i) % TONS.length];
+}
+const estiloTom = k => { const [a, b] = tomDe(k); return `--t1:${a};--t2:${b}`; };
+function figuraTreino(k){
+  if(k === 'corrida') return '';
+  const ex = (plano().treinos[k]?.ex || []).find(e => !ehCardio(e.id) && POSES && FICHAS[e.id]);
+  return ex ? `<div class="hm-fig" aria-hidden="true">${desenhoPose(ex.id, 'B')}</div>` : '';
+}
+const DIAS_LONGOS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 function telaHome(){
   if(!db.configurado) return telaBoasVindas();
   const rot = rotacao();
   const and = emAndamento();
   const topo = bannerSalvo();
   const outroDia = retroAberto && retroData && retroData !== diaISO();
-  let rotulo, titulo, principal;
+  let principal;
+  const hojeTxt = 'Hoje · ' + DIAS_LONGOS[new Date().getDay()];
   if(and){
-    const nome = and.corrida ? 'Corrida' : 'Treino ' + and.t;
-    rotulo = '<span class="hm-verde">Treino em andamento</span>';
-    titulo = and.corrida ? 'Corrida<br>começada' : `${nome}<br>${and.feitas * 2 >= and.total ? 'passou da metade' : 'começado'}`;
     const pct = and.corrida ? 0 : Math.round(and.feitas / and.total * 100);
-    const agora = and.atual ? `<p class="cs hm-agora">Agora: <b>${esc(and.atual.e.nome)}</b> · ${and.atual.n}ª série${and.atual.ult ? ' · ' + serieTxt(and.atual.e.id, and.atual.ult) : ''}</p>` : '';
-    principal = `<section class="card hm-prox">
-      ${and.corrida ? '' : `<div class="hm-linha"><p class="hm-t">${and.exFeitos} de ${and.nEx} exercícios</p><p class="cs">${and.feitas}/${and.total} séries${and.min > 0 && and.min < 300 ? ' · ' + and.min + ' min' : ''}</p></div>
-      <div class="hm-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Séries feitas"><i style="width:${pct}%"></i></div>`}
-      ${agora}<button type="button" class="btn" data-tipo="${and.t}" data-home="1">Continuar treino</button></section>`;
+    const agora = and.atual ? `<p class="hm-h-info">Agora: <b>${esc(and.atual.e.nome)}</b> · ${and.atual.n}ª série${and.atual.ult ? '<br>Última: ' + serieTxt(and.atual.e.id, and.atual.ult) : ''}</p>` : '';
+    principal = `<section class="hm-hero" style="${estiloTom(and.t)}">${figuraTreino(and.t)}<div class="hm-h-txt">
+      <p class="hm-h-rot">Em andamento</p>
+      <h1 class="hm-h-tit">${and.corrida ? 'Corrida' : 'Treino ' + esc(and.t)}</h1>
+      ${and.corrida ? '' : `<p class="hm-h-foco">${and.exFeitos} de ${and.nEx} exercícios · ${and.feitas}/${and.total} séries</p>
+      <div class="hm-h-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Séries feitas"><i style="width:${pct}%"></i></div>`}
+      ${agora}</div>
+      <button type="button" class="hm-h-btn" data-tipo="${and.t}" data-home="1">Continuar treino</button></section>`;
   } else {
     const prox = proximoRot();
     const feitoHoje = db.sessoes.some(s => diaISO(new Date(s.data)) === diaISO() && s.tipo !== 'corrida');
     const tr = plano().treinos[prox];
     const outros = [...rot.filter(k => k !== prox), 'corrida'];
-    const chips = outros.map(k => `<button type="button" class="hm-chip" data-tipo="${k}" data-home="1">${k === 'corrida' ? 'Corrida' : k}</button>`).join('') +
+    const chips = outros.map(k => `<button type="button" class="hm-chip" data-tipo="${k}" data-home="1"><i style="background:${tomDe(k)[0]}"></i>${k === 'corrida' ? 'Corrida' : k}</button>`).join('') +
       `<button type="button" class="hm-chip${retroAberto ? ' on' : ''}" data-acao="${retroAberto ? 'retro-fechar' : 'retro-abrir'}" aria-expanded="${retroAberto}">Outro dia</button>`;
-    if(outroDia){ rotulo = 'Outro dia'; titulo = `Lançar treino<br>de ${fmtDia(retroData)}`; }
-    else if(feitoHoje){ rotulo = saudacao(); titulo = 'Treino de hoje<br>feito ✓'; }
-    else if(!db.sessoes.length){ rotulo = '<span class="hm-verde">Tudo pronto</span>'; titulo = `Primeiro treino:<br>Treino ${esc(prox)}`; }
-    else { rotulo = saudacao(); titulo = `Hoje é dia<br>de Treino ${esc(prox)}`; }
+    const rotulo = outroDia ? 'Lançar treino de ' + fmtDia(retroData) : feitoHoje ? 'Treino de hoje feito ✓ · próximo' : !db.sessoes.length ? 'Primeiro treino' : hojeTxt;
     const q = quandoFoi(prox);
-    principal = `<section class="card hm-prox"><p class="rot hm-verde">${feitoHoje && !outroDia ? 'Próximo, amanhã' : db.sessoes.length ? 'Há mais tempo sem fazer' : 'Começa pelo começo'}</p>
-      <p class="hm-t">Treino ${esc(prox)}${tr.foco ? ' · ' + esc(tr.foco) : ''}</p>
-      <p class="cs">${tr.ex.length} exercícios · ${seriesPrevistas(prox)} séries${q !== 'nunca' ? ' · último ' + esc(prox) + ' ' + q : ''}</p>
-      <button type="button" class="btn${feitoHoje && !outroDia ? ' sec-btn' : ''}" data-tipo="${prox}" data-home="1">${outroDia ? 'Lançar' : 'Começar'} Treino ${esc(prox)}</button>
+    principal = `<section class="hm-hero${feitoHoje && !outroDia ? ' feito' : ''}" style="${estiloTom(prox)}">${figuraTreino(prox)}<div class="hm-h-txt">
+      <p class="hm-h-rot">${rotulo}</p>
+      <h1 class="hm-h-tit">Treino ${esc(prox)}</h1>
+      ${tr.foco ? `<p class="hm-h-foco">${esc(tr.foco)}</p>` : ''}
+      <p class="hm-h-info">${tr.ex.length} exercícios · ${seriesPrevistas(prox)} séries${q !== 'nunca' ? `<br>último ${esc(prox)} ${q}` : ''}</p></div>
+      <button type="button" class="hm-h-btn" data-tipo="${prox}" data-home="1">${outroDia ? 'Lançar' : 'Começar'} Treino ${esc(prox)}</button></section>
       <div class="hm-chips">${chips}</div>
-      ${retroAberto ? `<div class="retro-box"><label class="lb" for="retro-data">Data do treino</label>
+      ${retroAberto ? `<div class="card retro-box hm-retro"><label class="lb" for="retro-data">Data do treino</label>
         <input class="inp" type="date" id="retro-data" data-retro="1" value="${esc(retroData)}" min="${limiteRetro()}" max="${diaISO()}">
-        <p class="cs" style="margin-top:6px">${outroDia ? `Toque no treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p></div>` : ''}
-    </section>`;
+        <p class="cs" style="margin-top:6px">${outroDia ? `Toque no treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p></div>` : ''}`;
   }
-  return topo + cab(rotulo, titulo, '', calendario(outroDia ? dataDeISO(retroData) : new Date())) + principal + lembreteBackup() + guiaPrimeiro() + cardMetas() + avisoInstalar() + cardsRodape();
+  return topo + principal + lembreteBackup() + guiaPrimeiro() + cardMetas() + avisoInstalar() + cardsRodape();
 }
 
 function telaHoje(){
@@ -598,8 +612,18 @@ function telaHoje(){
   const seg = keys.map(k =>
     `<button type="button" role="tab" aria-selected="${k === t}" data-tipo="${k}" class="${k === t ? 'on' : ''}">${k === 'corrida' ? 'Corrida' : k}</button>`
   ).join('');
-  return topo + `<div class="seg n${keys.length}" role="tablist" aria-label="Treino">${seg}</div>` +
-    (t === 'corrida' ? telaCorrida() : telaTreino(t));
+  const rt = dataRetro();
+  let cont = '';
+  if(t !== 'corrida'){
+    const rd = db.rascunhos[rascKey(t)], lista = montarDia(plano(), t, rd).filter(e => !ehCardio(e.id));
+    const tot = lista.reduce((a, e) => a + e.series, 0), feitas = lista.reduce((a, e) => a + Math.min(e.series, feitasDe(rd?.ex?.[e.id])), 0);
+    cont = `<div class="tr-cont"><b>${feitas}<span>/${tot}</span></b><small>séries</small></div><div class="tr-prog" aria-hidden="true"><i style="width:${tot ? Math.round(feitas / tot * 100) : 0}%"></i></div>`;
+  }
+  const banda = `<section class="tr-banda" style="${estiloTom(t)}">
+    <div class="tr-pilulas" role="tablist" aria-label="Treino">${seg}</div>
+    <div class="tr-cab"><div><p class="tr-rot">${rt ? `Lançando em ${fmtDia(rt)} · <button type="button" class="lnk lnk-mini" data-acao="retro-hoje">usar hoje</button>` : t === 'corrida' ? 'Cardio' : 'Treino de hoje'}</p>
+      <h1>${t === 'corrida' ? 'Corrida' : 'Treino ' + esc(t)}</h1><p class="tr-foco">${t === 'corrida' ? 'Ritmo confortável' : esc(plano().treinos[t].foco || '')}</p></div>${cont}</div></section>`;
+  return topo + banda + (t === 'corrida' ? telaCorrida() : telaTreino(t));
 }
 
 function rascKey(t){ return db.planoAtivo + ':' + t; }
@@ -813,8 +837,7 @@ function telaTreino(t){
   }).join('');
   recemFechado = null; recemMarcado = null;
   const rt = dataRetro();
-  return cab(rt ? `Lançando em ${fmtDia(rt)} · <button type="button" class="lnk lnk-mini" data-acao="retro-hoje">usar hoje</button>` : 'Treino de hoje', 'Treino ' + t, esc(p.foco), calendario(rt ? dataDeISO(rt) : new Date())) +
-    `<div class="sec"><span>Exercícios</span><span>${lista.length} · ${lista.filter(e => !ehCardio(e.id)).reduce((a, e) => a + e.series, 0)} séries · 1–2 da falha</span></div>
+  return `<div class="sec"><span>Exercícios</span><span>${lista.length} · ${lista.filter(e => !ehCardio(e.id)).reduce((a, e) => a + e.series, 0)} séries · 1–2 da falha</span></div>
     ${db.sessoes.filter(s => s.tipo !== 'corrida').length < 6 ? '<p class="dica">Toque no ✓ para repetir a última série. Digite só quando mudar.</p>' : ''}
     <div class="lista-ex">${cards}</div>
     ${addHoje ? `<section class="card add-painel"><div class="troca" style="margin-top:0"><p class="troca-t">Adicionar exercício</p>
@@ -857,8 +880,7 @@ function telaCorrida(){
   const p = pace(num(rd.km), num(rd.min));
   const sens = ['Leve', 'Moderada', 'Puxada'].map(s => `<button type="button" class="chip ${rd.sens === s ? 'on' : ''}" aria-pressed="${rd.sens === s}" data-sens="${s}">${s}</button>`).join('');
   const rt = dataRetro();
-  return cab(rt ? `Lançando em ${fmtDia(rt)} · <button type="button" class="lnk lnk-mini" data-acao="retro-hoje">usar hoje</button>` : 'Cardio', 'Corrida', 'Ritmo confortável', calendario(rt ? dataDeISO(rt) : new Date())) +
-    `<div class="sec"><span>Registro</span></div>
+  return `<div class="sec"><span>Registro</span></div>
     <section class="card">
       <div class="grid2">
         <div><label class="lb" for="run-km">Distância</label><span class="field"><input id="run-km" inputmode="decimal" data-run="km" value="${esc(rd.km)}" placeholder="0"><small>km</small></span></div>
@@ -1141,7 +1163,16 @@ function painelHist(soDet){
   let rec = null;
   ids.forEach(id => { const pts = pontosEx(id, 'forca'); for(let i = pts.length - 1; i > 0; i--){ if(agora - new Date(pts[i].d) > 7 * DIA) break; const antes = Math.max(...pts.slice(0, i).map(p => p.v)); if(pts[i].v > antes && (!rec || pts[i].v / antes > rec.g)) rec = { id, g: pts[i].v / antes, sets: pts[i].sets }; } });
   if(rec) dest.push(['ok', 'Recorde da semana', `${esc(nomeEx(rec.id))} · ${melhorTxt(rec.sets)}`, 'melhor série desde que começou', rec.id]);
-  const destHtml = dest.length ? `<div class="hp-dest">${dest.map(([c, t, x, s, id]) => `<button type="button" class="card hp-d ${c}" data-hex="${id}"><span class="rot">${t}</span><b>${x}</b><span class="cs">${s}</span></button>`).join('')}</div>`
+  const evoHtml = evol ? (() => { const vs = evol.pts.map(p => p.v), mn = Math.min(...vs), mx = Math.max(...vs);
+      const xy = vs.map((v, i) => [vs.length > 1 ? i / (vs.length - 1) * 300 : 300, 52 - (mx > mn ? (v - mn) / (mx - mn) * 46 : 23)]);
+      return `<button type="button" class="hp-evo" data-hex="${evol.id}" style="${estiloTom('A')}">
+        ${FICHAS[evol.id] ? `<div class="hm-fig" aria-hidden="true">${desenhoPose(evol.id, 'B')}</div>` : ''}
+        <span class="hp-evo-rot">Maior evolução · ${nomeP.toLowerCase()}</span><span class="hp-evo-nome">${esc(nomeEx(evol.id))}</span>
+        <span class="hp-evo-n">+${fmtNum(evol.d)}<small> kg</small></span>
+        <svg viewBox="-6 -6 312 64" preserveAspectRatio="none" aria-hidden="true"><polyline points="${xy.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}"/><circle cx="${xy[xy.length - 1][0]}" cy="${xy[xy.length - 1][1].toFixed(1)}" r="5"/></svg>
+        <span class="hp-evo-sub">força estimada da melhor série</span></button>`; })() : '';
+  const resto = dest.filter(x => x[1] !== 'Maior evolução');
+  const destHtml = dest.length ? evoHtml + (resto.length ? `<div class="hp-dest">${resto.map(([c, t, x, s, id]) => `<button type="button" class="card hp-d ${c}" data-hex="${id}"><span class="rot">${t}</span><b>${x}</b><span class="cs">${s}</span></button>`).join('')}</div>` : '')
     : `<div class="card hp-poucos"><p class="cs">Os destaques (maior evolução, o que está parado e os recordes) aparecem com algumas semanas de registros.</p></div>`;
   /* volume por músculo */
   const vol = {};
@@ -1189,7 +1220,7 @@ function painelHist(soDet){
   const sel = info.find(x => x.id === histEx) || (soDet ? null : info[0]);
   const LIM = 6, corta = telaEstreita() && !histTodos && info.length > LIM + 1;
   const lista = (corta ? info.slice(0, LIM) : info).map(x => { const t = letraDe(x.id), g = BIB_ID[x.id] ? GRUPOS[BIB_ID[x.id].g] : '';
-    return `<button type="button" class="hp-ex ${sel && x.id === sel.id ? 'on' : ''}" data-hex="${x.id}" aria-pressed="${sel && x.id === sel.id}">
+    return `<button type="button" class="hp-ex ${sel && x.id === sel.id ? 'on' : ''}" data-hex="${x.id}" aria-pressed="${sel && x.id === sel.id}"${t ? ` style="--tc:${tomDe(t)[0]}"` : ''}>
       <span class="hp-ex-n"><b>${esc(nomeEx(x.id))}</b><small>${t ? 'Treino ' + t + ' · ' : ''}${g}</small></span>
       ${sparkSvg(x.pts.slice(-12).map(p => p.v), x.st.k)}
       <span class="hp-ex-v"><b>${fmtNum(x.pts[x.pts.length - 1].v)} kg</b><small class="${x.st.k}">${x.d == null ? x.st.t : (x.d >= 0 ? '+' : '') + fmtNum(x.d) + ' kg'}</small></span></button>`; }).join('');
@@ -1279,7 +1310,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v41 · nov/2026';
+const VERSAO = 'v42 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1635,6 +1666,9 @@ function render(){
   if(concluido && !html.includes('folha-fundo')) html += folhaConcluido(concluido);
   if(instalarAberto && !html.includes('folha-fundo')) html += folhaInstalar(true);
   $('#app').innerHTML = html;
+  /* na aba Treino, o topo do app pega a cor do treino do dia (no celular) */
+  const tb = aba === 'hoje' && tipoAtual(); document.body.classList.toggle('banda', !!tb);
+  if(tb){ const [a1, a2] = tomDe(tb); document.body.style.setProperty('--t1', a1); document.body.style.setProperty('--t2', a2); }
   const navAba = (aba === 'editor' || aba === 'gerador' || aba === 'metas') ? 'plano' : aba;
   document.querySelectorAll('nav.menu button').forEach(b => {
     const on = b.dataset.aba === navAba;
