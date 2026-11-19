@@ -60,7 +60,12 @@ function load(){
   }
   return d;
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} if(window.nuvemMudou) nuvemMudou(); }
+let avisouSave = 0;
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(db)); }
+  catch(e){ if(Date.now() - avisouSave > 15e3){ avisouSave = Date.now(); setTimeout(() => toast('Não consegui salvar neste aparelho (armazenamento cheio?). Exporte um backup.'), 0); } }
+  if(window.nuvemMudou) nuvemMudou();
+}
 let db = load();
 
 /* estado da interface */
@@ -81,7 +86,7 @@ const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); retu
 const fmtNum = n => String(Math.round(n * 10) / 10).replace('.', ',');
 const fmtMil = n => Math.round(n).toLocaleString('pt-BR');
 const fmtData = (iso, opt = { day: '2-digit', month: '2-digit' }) => new Date(iso).toLocaleDateString('pt-BR', opt);
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const SVG = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
 const IC = {
   up: SVG('M12 19V5M5 12l7-7 7 7'), share: SVG('M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6'),
@@ -273,7 +278,10 @@ function quandoFoi(k){
   }
   return 'nunca';
 }
-const diasDesde = iso => Math.floor((Date.now() - new Date(iso)) / 864e5);
+/* dias de calendário (meia-noite local), não blocos de 24 h: treino de ontem às 22 h visto hoje às 8 h = 1 dia */
+const diaDe = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const diasEntre = (a, b) => Math.round((diaDe(b) - diaDe(a)) / 864e5);
+const diasDesde = iso => diasEntre(iso, new Date());
 const vibrar = p => { try{ if(navigator.vibrate && !matchMedia('(prefers-reduced-motion: reduce)').matches) navigator.vibrate(p); }catch(e){} };
 const kgTxt = v => esc(String(v ?? '').replace('.', ','));
 const ehApp = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -382,7 +390,7 @@ function lembreteBackup(){
   return `<section class="card hm-alerta hm-bkp" role="status"><div class="hm-topo"><p class="rot">Seus treinos estão só neste celular</p>
       <button type="button" class="x-btn" data-acao="adiar-backup" aria-label="Lembrar depois">${IC.x}</button></div>
     <p class="cs">Se o celular for trocado ou o navegador limpar os dados, o histórico vai junto.${db.ultimoBackup ? ` Último arquivo de backup há ${diasDesde(db.ultimoBackup)} dias.` : ''}</p>
-    <div class="hm-bkp-b"><button type="button" class="mini-btn" data-acao="bv-entrar">Criar conta</button><button type="button" class="mini-btn ghost" data-acao="exportar">Exportar arquivo</button></div></section>`;
+    <div class="hm-bkp-b"><button type="button" class="mini-btn" data-acao="bv-entrar">Criar conta</button><button type="button" class="lnk lnk-mini" data-acao="exportar">Exportar arquivo</button></div></section>`;
 }
 let instalarAberto = false;   // aberto pelo botão "Como instalar" em Ajustes
 function folhaInstalar(forcar = false){
@@ -569,8 +577,6 @@ const AV_IC = {
   constancia: '<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"/>',
   recorde: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/>',
 };
-const diaDe = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
-const diasEntre = (a, b) => Math.round((diaDe(b) - diaDe(a)) / DIA);
 const academia = () => db.sessoes.filter(s => s.tipo !== 'corrida').sort((a, b) => new Date(a.data) - new Date(b.data));
 /* dias seguidos de constância: desde a segunda-feira da 1ª semana da sequência atual */
 function diasConstancia(){
@@ -686,6 +692,13 @@ function avisoPausaRotulo(){
 }
 
 let maisAberto = false;
+function retroCaixa(){
+  const od = retroAberto && retroData && retroData !== diaISO();
+  return `<div class="card retro-box hm-retro"><label class="lb" for="retro-data">Data do treino</label>
+    <input class="inp" type="date" id="retro-data" data-retro="1" value="${esc(retroData)}" min="${limiteRetro()}" max="${diaISO()}">
+    <p class="cs" style="margin-top:6px">${od ? `Toque no treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p>
+    <div class="acoes"><button type="button" class="lnk lnk-mini" data-acao="retro-fechar">Cancelar</button></div></div>`;
+}
 function folhaMais(){
   const ult = (db.livres || [])[0];
   return `<div class="folha-fundo" data-fundo="mais"><section class="folha mais-f" role="dialog" aria-modal="true" aria-label="Outras opções de treino">
@@ -759,7 +772,8 @@ function telaHome(){
       ${and.corrida ? '' : `<p class="hm-h-foco">${and.exFeitos} de ${and.nEx} exercícios · ${and.feitas}/${and.total} séries</p>
       <div class="hm-h-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Séries feitas"><i style="width:${pct}%"></i></div>`}
       ${agora}</div>
-      <button type="button" class="hm-h-btn" data-tipo="${and.t}" data-home="1">Continuar treino</button></section>`;
+      <button type="button" class="hm-h-btn" data-tipo="${and.t}" data-home="1">Continuar treino</button></section>
+      <div class="hm-chips">${[...rot, 'corrida'].filter(k => k !== and.t).map(k => `<button type="button" class="hm-chip" data-tipo="${k}" data-home="1"><i style="background:${tomDe(k)[0]}"></i>${k === 'corrida' ? 'Corrida' : k}</button>`).join('')}<button type="button" class="hm-chip hm-mais" data-acao="mais" aria-label="Treino personalizado ou de outro dia" aria-haspopup="dialog">+</button></div>`;
   } else {
     const prox = proximoRot();
     const feitoHoje = db.sessoes.some(s => diaISO(new Date(s.data)) === diaISO() && s.tipo !== 'corrida');
@@ -781,7 +795,7 @@ function telaHome(){
         <p class="cs" style="margin-top:6px">${outroDia ? `Toque no treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p>
         <div class="acoes"><button type="button" class="lnk lnk-mini" data-acao="retro-fechar">Cancelar</button></div></div>` : ''}`;
   }
-  return topo + principal + (maisAberto ? folhaMais() : '') + avisosHome() + lembreteBackup() + guiaPrimeiro() + cardMetas() + avisoInstalar() + cardsRodape();
+  return topo + principal + (retroAberto && and ? retroCaixa() : '') + (maisAberto ? folhaMais() : '') + avisosHome() + lembreteBackup() + guiaPrimeiro() + cardMetas() + avisoInstalar() + cardsRodape();
 }
 
 function telaHoje(){
@@ -1101,7 +1115,7 @@ function telaCorrida(){
    HISTÓRICO + DASHBOARD
    ========================================================= */
 function graficoLinha(pts){
-  const W = 600, H = 240, L = 46, R = 18, T = 22, B = 34;
+  const W = 600, H = 240, L = 46, R = 18, T = 34, B = 34;
   const vs = pts.map(p => p.v);
   let mn = Math.min(...vs), mx = Math.max(...vs);
   if(mn === mx){ mn -= 5; mx += 5; }
@@ -1116,7 +1130,7 @@ function graficoLinha(pts){
   const linha = pts.map((p, i) => `${x(i)},${y(p.v)}`).join(' ');
   const ptsSvg = pts.map((p, i) => `<circle class="pt" cx="${x(i)}" cy="${y(p.v)}" r="5"><title>${fmtData(p.d)}: ${fmtNum(p.v)} kg</title></circle>`).join('');
   const ult = pts[pts.length - 1];
-  const lab = `<text class="val" x="${x(pts.length - 1)}" y="${y(ult.v) - 12}" text-anchor="end">${fmtNum(ult.v)} kg</text>`;
+  const lab = `<text class="val" x="${x(pts.length - 1)}" y="${y(ult.v) - 16}" text-anchor="end">${fmtNum(ult.v)} kg</text>`;
   const xs = `<text x="${L}" y="${H - 8}">${fmtData(pts[0].d)}</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${fmtData(ult.d)}</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolução por treino, de ${fmtNum(pts[0].v)} a ${fmtNum(ult.v)} kg">${g}<polyline class="linha" points="${linha}"/>${ptsSvg}${lab}${xs}</svg>`;
 }
@@ -1509,7 +1523,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v48 · nov/2026';
+const VERSAO = 'v49 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1990,11 +2004,12 @@ $('#app').addEventListener('change', e => {
       try{
         const d = JSON.parse(r.result);
         if(!Array.isArray(d.sessoes)) throw 0;
-        const okSessao = s => s && (typeof s.id === 'number' || typeof s.id === 'string') && !isNaN(new Date(s.data)) && typeof s.tipo === 'string' && s.tipo.length <= 12;
+        const okSessao = s => s && (typeof s.id === 'number' || typeof s.id === 'string') && !isNaN(new Date(s.data)) && typeof s.tipo === 'string' && /^[a-z0-9-]{1,12}$/i.test(s.tipo) &&
+          (!s.ex || Object.keys(s.ex).every(k => /^[a-z0-9-]{1,60}$/i.test(k)));
         if(!d.sessoes.every(okSessao)) throw 0;
         if(d.planos){
           const okPlano = p => p && typeof p.nome === 'string' && Array.isArray(p.rotacao) && p.rotacao.length && p.treinos &&
-            p.rotacao.every(k => p.treinos[k] && Array.isArray(p.treinos[k].ex) && p.treinos[k].ex.every(e => e && e.id && e.nome && Array.isArray(e.reps)));
+            p.rotacao.every(k => p.treinos[k] && Array.isArray(p.treinos[k].ex) && p.treinos[k].ex.every(e => e && /^[a-z0-9-]{1,60}$/i.test(e.id) && e.nome && Array.isArray(e.reps)) && /^[a-z0-9-]{1,12}$/i.test(k));
           if(!Object.values(d.planos).every(okPlano)) throw 0;
         }
         if(!confirm(`Substituir os dados atuais por ${d.sessoes.length} registros do backup?`)) return;
@@ -2051,7 +2066,13 @@ $('#app').addEventListener('click', e => {
     const rd = rascunho(t);
     const e = exerciciosDoDia(t).find(x => x.id === el.dataset.ok);
     const sets = setsDe(rd, e); const i = +el.dataset.i; const s = sets[i];
-    if(s.reps !== ''){ toast(ehCardio(e.id) ? 'Para desfazer, apague os minutos' : 'Para desfazer, apague as reps'); return; }
+    if(s.reps !== ''){
+      sets[i] = { kg: s.kg, reps: '' }; rd.editado = Date.now(); save();
+      const row = el.closest('.set'); const ri = row?.querySelector('[data-f="reps"]');
+      if(ri){ ri.value = ''; row.classList.remove('ok'); el.setAttribute('aria-pressed', 'false'); atualizarBarra(t); }
+      else render();
+      toast('Série desmarcada'); return;
+    }
     {
       const ls = ultimo(e.id)?.sets[i] || (i > 0 && sets[i - 1].reps !== '' ? sets[i - 1] : null);
       const kg = s.kg || (ls ? String((voltaAtiva() && ultimo(e.id)?.sets[i] ? kgVolta(ls.kg) : ls.kg) || '').replace('.', ',') : '');

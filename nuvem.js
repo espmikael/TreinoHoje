@@ -22,7 +22,7 @@ window.nuvemMudou = function(){
   if(nvAplicando) return;
   nv.mod = Date.now(); nvSalvar();
   if(!nvLogado()) return;
-  clearTimeout(nvTimer); nvTimer = setTimeout(sincronizar, 2500);
+  clearTimeout(nvTimer); nvTimer = setTimeout(sincronizar, 1200);   /* curto: no iPhone o envio ao minimizar pode ser cortado */
 };
 /* com a nuvem em dia, o lembrete de backup manual some */
 window.nuvemIcone = () => !nvLogado() ? 'sem' : !navigator.onLine || nvEstado === 'offline' ? 'off' : nvEstado === 'enviando' ? 'env' : (nvEstado === 'erro' || nvEstado === 'expirada') ? 'erro' : 'ok';
@@ -47,7 +47,7 @@ async function nvToken(){
   if(r.status >= 400 && r.status < 500){ nvEstado = 'expirada'; return false; }
   throw new Error('rede');
 }
-/* entrar com e-mail e senha (a mesma conta do MyFinance); criar conta é opcional */
+/* entrar com e-mail e senha (projeto próprio no Supabase, separado dos outros apps); criar conta é opcional */
 let nvModo = 'entrar';
 const msgErro = r => ((r.corpo && (r.corpo.error_description || r.corpo.msg || r.corpo.message || r.corpo.error_code)) || '') + ' ' + r.status;
 async function nuvemEntrar(email, senha){
@@ -106,6 +106,7 @@ function nuvemSair(){
 /* assinatura curta dos dados sincronizáveis: evita reenviar quando só mudou o treino em andamento */
 function assinatura(){ const s = JSON.stringify(semLocais(db)); let h = 0; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return s.length + ':' + h; }
 const semLocais = d => { const o = JSON.parse(JSON.stringify(d)); SO_AQUI.forEach(k => delete o[k]); return o; };
+let nvPendente = false;   // mudança que talvez não tenha subido (app minimizado no meio do envio)
 function mesclar(L, R, localMaisNovo){
   const base = localMaisNovo ? semLocais(L) : semLocais(R);
   const apagados = [...new Set([...(L.apagados || []), ...(R.apagados || [])].map(String))].slice(-500);
@@ -154,7 +155,7 @@ async function sincronizar(forcar){
       const localVence = !nv.sinc || (nv.mod || 0) > new Date(remoto.atualizado);
       aplicar(mesclar(db, remoto.dados, localVence)); await enviar(); }
     else if(localMudou){ await enviar(); }
-    nv.sinc = Date.now(); nvSalvar(); nvEstado = 'ok'; nvMsg = '';
+    nv.sinc = Date.now(); nvSalvar(); nvEstado = 'ok'; nvMsg = ''; nvPendente = false;
   }catch(e){
     nvEstado = navigator.onLine ? 'erro' : 'offline';
     nvMsg = e && e.status === 404 ? 'A tabela da nuvem não foi encontrada.' : '';
@@ -269,8 +270,8 @@ voltaDoEmail();
 window.addEventListener('hashchange', voltaDoEmail);
 window.addEventListener('online', () => sincronizar());
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'hidden' && nvTimer){ clearTimeout(nvTimer); nvTimer = null; sincronizar(); }   // fechou o app logo depois de mexer
-  if(document.visibilityState === 'visible' && Date.now() - (nv.sinc || 0) > 60e3) sincronizar();
+  if(document.visibilityState === 'hidden' && nvTimer){ clearTimeout(nvTimer); nvTimer = null; nvPendente = true; sincronizar(); }   // tenta; o iOS pode cortar
+  if(document.visibilityState === 'visible' && (nvPendente || Date.now() - (nv.sinc || 0) > 60e3)) sincronizar();
 });
 /* o app desenha a primeira tela antes deste arquivo carregar: redesenha já sabendo se há conta */
 if(nvLogado()){ render(); setTimeout(sincronizar, 800); } else if(window.atualizarNuvemIcone) atualizarNuvemIcone();

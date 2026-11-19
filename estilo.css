@@ -890,3 +890,28 @@ body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area
 .tr-cab > div:first-child{flex:1;min-width:0}
 .tr-cab:has(.tr-nome){flex-wrap:nowrap}
 .tr-cab:has(.tr-nome) .tr-prog{display:none}
+
+/* ===== rodada 24 · revisão (Gemini) ===== */
+/* valor sugerido não pode parecer preenchido */
+.set input::placeholder,.field input::placeholder{opacity:.4;font-weight:400}
+/* áreas de toque de pelo menos 44 px */
+.tr-pilulas button{height:44px;padding:0 17px}
+.mt-b,.mt-x{width:44px;height:44px}
+.av-x{width:44px;height:44px;right:2px;top:2px}
+.nv-ic{width:44px;height:44px}
+.serie-btn{width:56px;height:44px}
+.info{width:44px;height:44px;margin:-6px -6px -6px -4px}
+/* o (i) não cai sozinho para a linha de baixo */
+li .nome-i{display:flex!important;align-items:center;gap:0}
+li .nome-i .info{margin:-8px 0}
+.ex-head .nome-i{display:flex;align-items:center;flex-wrap:nowrap}
+.ex-head .nome-i h2{min-width:0}
+/* rótulo do gráfico legível sobre a linha */
+svg text.val{paint-order:stroke;stroke:var(--surface);stroke-width:5px;stroke-linejoin:round}
+/* contraste nos cartões coloridos */
+.hm-h-rot,.hm-h-info,.hm-h-foco,.tr-rot,.tr-foco,.tr-cont small,.hp-evo-rot,.hp-evo-sub{opacity:.94}
+/* aviso de backup: um só botão forte na tela (o Começar) */
+.hm-bkp-b .mini-btn:first-child{background:none;color:var(--ink);border-color:var(--rule)}
+.hm-bkp-b .lnk{flex:none;padding:0 6px}
+.hm-bkp-b .mini-btn{flex:none}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
