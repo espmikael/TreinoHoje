@@ -826,3 +826,20 @@ body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area
 .hp-evo-sub{margin-top:6px;font-size:12.5px;opacity:.8}
 .hp-ex{position:relative;padding-left:20px}
 .hp-ex::before{content:"";position:absolute;left:4px;top:12px;bottom:12px;width:5px;border-radius:3px;background:var(--tc,var(--line))}
+
+/* ===== rodada 20 · avisos no Início ===== */
+.av{position:relative;display:flex;gap:12px;align-items:flex-start;padding:14px 16px;margin-bottom:10px;border-radius:18px;background:var(--surface);border:1px solid color-mix(in srgb,var(--avc) 30%,transparent);box-shadow:inset 4px 0 0 var(--avc)}
+.av-aviso{--avc:var(--aviso)} .av-queda{--avc:var(--queda)} .av-ok{--avc:var(--brand)}
+.av-ic{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--avc) 16%,transparent)}
+.av-ic svg{width:22px;height:22px;fill:none;stroke:var(--avc);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.av-txt{flex:1;min-width:0;padding-right:18px}
+.av-rot{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--avc)}
+.av-tit{margin:3px 0 2px;font-size:16px;font-weight:800;line-height:1.3}
+.av-sub{margin:0;font-size:13px;color:var(--muted);line-height:1.4}
+.av-b{display:flex;gap:6px;align-items:center;margin-top:12px}
+.av-btn{height:38px;padding:0 15px;border:0;border-radius:999px;background:var(--avc);color:var(--bg);font-size:13.5px;font-weight:800}
+.av-depois{height:38px;padding:0 10px;border:0;background:none;color:var(--muted);font-size:13.5px;font-weight:600}
+.av-x{position:absolute;right:6px;top:6px;width:36px;height:36px;border:0;background:none;color:var(--muted);display:grid;place-items:center}
+.av-x svg{width:16px;height:16px}
+.av-cfg label{display:flex;align-items:center;gap:10px;min-height:40px;font-size:15px}
+.av-cfg input{width:20px;height:20px;accent-color:var(--brand)}

@@ -545,6 +545,141 @@ function figuraTreino(k){
   return ex ? `<div class="hm-fig" aria-hidden="true">${desenhoPose(ex.id, 'B')}</div>` : '';
 }
 const DIAS_LONGOS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+/* =========================================================
+   AVISOS DO INÍCIO (rodada 20): o app percebendo as coisas
+   No máximo 1 alerta + 1 coisa boa por vez, na ordem de prioridade.
+   ========================================================= */
+const AVISO_TIPOS = [
+  ['volta', 'Volta da pausa'], ['pausa', 'Dias sem treinar'], ['cansaco', 'Sinal de cansaço'], ['meta', 'Meta em risco'],
+  ['musculo', 'Músculo esquecido'], ['pulado', 'Exercício pulado'], ['km', 'Corrida do mês'], ['constancia', 'Constância'], ['recorde', 'Recorde'],
+];
+const AV_IC = {
+  pausa: '<circle cx="12" cy="12" r="8.5"/><path d="M10 9v6M14 9v6"/>',
+  volta: '<path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/>',
+  meta: '<rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+  musculo: '<path d="M4 14c2-6 6-9 10-9 2 0 3 1 3 3s-2 3-4 3c3 0 7 1 7 5 0 3-3 5-8 5-5 0-8-3-8-7z"/>',
+  cansaco: '<path d="M4 7l6 6 4-4 6 6"/><path d="M20 11v4h-4"/>',
+  pulado: '<rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 14l6 4M15 14l-6 4"/>',
+  km: '<circle cx="14" cy="4.5" r="2"/><path d="M10 21l2-6-3-3 3-4 3 3h3M7 13l2-3"/>',
+  constancia: '<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"/>',
+  recorde: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/>',
+};
+const diaDe = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const diasEntre = (a, b) => Math.round((diaDe(b) - diaDe(a)) / DIA);
+const academia = () => db.sessoes.filter(s => s.tipo !== 'corrida').sort((a, b) => new Date(a.data) - new Date(b.data));
+/* dias seguidos de constância: desde a segunda-feira da 1ª semana da sequência atual */
+function diasConstancia(){
+  const sq = sequencia(); if(!sq) return 0;
+  const ini = segunda(new Date()); ini.setDate(ini.getDate() - 7 * (sq - (semanaNaMeta(segunda(new Date())) ? 1 : 0)));
+  return diasEntre(ini, new Date()) + 1;
+}
+/* intervalo normal entre treinos (dias), nos últimos 2 meses */
+function intervaloNormal(){
+  const dias = [...new Set(academia().filter(s => diasDesde(s.data) <= 60).map(s => diaISO(new Date(s.data))))].sort();
+  if(dias.length < 4) return null;
+  const gaps = dias.slice(1).map((d, i) => diasEntre(dataDeISO(dias[i]), dataDeISO(d)));
+  return { media: gaps.reduce((a, b) => a + b, 0) / gaps.length, maior: Math.max(...gaps) };
+}
+function voltaAtiva(){ return db.volta && db.volta.dia === diaISO(); }
+const kgVolta = kg => { const n = num(kg); return n ? String(Math.round(n * 0.9 * 2) / 2) : kg; };
+function avisosDisponiveis(){
+  const out = [], off = db.avisosOff || {}, ac = academia(), ult = ac[ac.length - 1];
+  const add = a => { if(!off[a.k]) out.push(a); };
+  const sem = ult ? diasEntre(ult.data, new Date()) : 0;
+  /* 1 · volta da pausa / dias sem treinar */
+  if(ult && ac.length >= 3 && sem >= 10){
+    add({ k: 'volta', id: 'volta:' + ult.id, cor: 'ok', rot: 'Volta da pausa', tit: voltaAtiva() ? 'Cargas a 90% ativadas para hoje' : 'Comece com 90% das cargas',
+      sub: voltaAtiva() ? 'Os campos do treino já vêm com a carga reduzida. Na próxima vez, volta ao normal.' : `${sem} dias parado. Pegar leve no primeiro treino evita dor e lesão.`,
+      acao: voltaAtiva() ? null : ['volta-90', 'Usar cargas a 90%'] });
+  } else if(ult && sem >= 3){
+    const iv = intervaloNormal();
+    if(!iv || sem >= Math.max(3, Math.round(iv.media) + 1)){
+      const maior = iv && sem > iv.maior;
+      const ini = segunda(new Date()), { g } = contaSemana(ini), ma = db.metas.academia ? metaAcad(ini) : 0;
+      const restam = 7 - (new Date().getDay() + 6) % 7, falta = Math.max(0, ma - g);
+      add({ k: 'pausa', id: 'pausa:' + ult.id, cor: 'aviso', rot: `${sem} dias sem treinar`, tit: maior ? 'Sua maior pausa em 2 meses' : 'Mais tempo que o normal',
+        sub: (iv ? `Você costuma treinar a cada ${fmtNum(Math.round(iv.media * 10) / 10)} dias.` : '') + (falta && falta <= restam ? ` Ainda dá para fechar ${falta} ${plural(falta, 'treino', 'treinos')} nesta semana.` : '') });
+    }
+  }
+  /* 2 · sinal de cansaço: 3+ exercícios abaixo da última vez */
+  if(ult && diasDesde(ult.data) <= 7){
+    const cai = mudancasDe(ult).filter(m => m.k === 'cai');
+    if(cai.length >= 3){
+      const ant = ac.filter(x => x.tipo === ult.tipo && x.id !== ult.id).pop();
+      const dePnovo = ant && mudancasDe(ant).filter(m => m.k === 'cai').length >= 3;
+      add({ k: 'cansaco', id: 'cans:' + ult.id, cor: 'queda', rot: 'Último treino', tit: `${cai.length} exercícios caíram no Treino ${esc(ult.tipo)}`,
+        sub: dePnovo ? 'Pela segunda vez seguida. Vale uma semana leve: mesma rotina com ~70% das cargas.' : `Pode ser cansaço acumulado. Se repetir no próximo ${esc(ult.tipo)}, considere uma semana leve.`,
+        acao: ['ver-hist', 'Ver o que caiu'] });
+    }
+  }
+  /* 3 · meta da semana em risco */
+  if(db.metas.academia){
+    const ini = segunda(new Date()), { g } = contaSemana(ini), ma = metaAcad(ini), restam = 7 - (new Date().getDay() + 6) % 7, falta = ma - g;
+    if(falta > 0 && falta > restam - (db.sessoes.some(x => diaISO(new Date(x.data)) === diaISO()) ? 1 : 0) && falta <= restam + 1)
+      add({ k: 'meta', id: 'meta:' + diaISO(ini), cor: 'aviso', rot: 'Meta em risco', tit: `Faltam ${falta} ${plural(falta, 'treino', 'treinos')}, ${restam === 1 ? 'resta 1 dia' : `restam ${restam} dias`}`,
+        sub: 'Dá para fechar com treinos em dias seguidos, ou ajustar a meta desta semana.', acao: ['metas', 'Ajustar meta'] });
+  }
+  /* 4 · músculo esquecido: grupo do plano abaixo de 10 séries/semana nas últimas 3 semanas */
+  if(ac.length && diasDesde(ac[0].data) >= 21){
+    const desde = Date.now() - 21 * DIA, vol = {};
+    const doPlanoG = new Set(Object.values(plano().treinos).flatMap(t => t.ex.flatMap(e => FICHAS[e.id] ? FICHAS[e.id].p : [])));
+    const GRANDES = ['peito', 'costas', 'ombro', 'pernas', 'posterior', 'gluteos'];   /* core, braços e panturrilha costumam ter pouco volume de propósito */
+    doPlanoG.forEach(g => { if(GRANDES.includes(g)) vol[g] = 0; });
+    ac.filter(x => new Date(x.data) >= desde).forEach(x => Object.entries(x.ex || {}).forEach(([id, sets]) => { const f = FICHAS[id]; if(!f) return;
+      f.p.forEach(g => { if(g in vol) vol[g] += sets.length; }); f.s.forEach(g => { if(g in vol) vol[g] += sets.length / 2; }); }));
+    const [g, n] = Object.entries(vol).map(([g, n]) => [g, n / 3]).sort((a, b) => a[1] - b[1])[0] || [];
+    if(g && n < 10){
+      const ex = Object.values(plano().treinos).flatMap(t => t.ex).find(e => FICHAS[e.id]?.p.includes(g));
+      add({ k: 'musculo', id: 'musc:' + g + ':' + diaISO(segunda(new Date())), cor: 'aviso', rot: 'Músculo esquecido', tit: `${GRUPOS[g] || g}: ${fmtNum(Math.round(n * 10) / 10)} séries por semana`,
+        sub: `O recomendado é de 10 a 20.${ex ? ` Uma série a mais em ${esc(ex.nome)} já ajuda.` : ''}` });
+    }
+  }
+  /* 5 · exercício pulado em 3 das últimas 4 vezes */
+  for(const [t, tr] of Object.entries(plano().treinos)){
+    const vezes = ac.filter(x => x.tipo === t && doPlano(x, plano()) && x.previsto).slice(-4);
+    if(vezes.length < 4) continue;
+    const e = tr.ex.find(e => !ehCardio(e.id) && vezes.filter(x => x.previsto[e.id] && !(x.ex[e.id] || []).length).length >= 3);
+    if(e){ add({ k: 'pulado', id: 'pul:' + e.id + ':' + vezes[3].id, cor: 'aviso', rot: 'Exercício pulado', tit: `${esc(e.nome)}: ficou de fora em 3 das últimas 4`,
+      sub: `Se não cabe no Treino ${esc(t)}, dá para trocar por outro ou tirar do plano.`, acao: ['editar', 'Editar plano'] }); break; }
+  }
+  /* 6 · corrida do mês atrás do ritmo */
+  if(db.metas.kmMes){
+    const h = new Date(), ini = new Date(h.getFullYear(), h.getMonth(), 1), dm = new Date(h.getFullYear(), h.getMonth() + 1, 0).getDate();
+    const km = db.sessoes.filter(x => x.tipo === 'corrida' && new Date(x.data) >= ini).reduce((a, x) => a + (num(x.corrida?.km) || 0), 0);
+    const falta = db.metas.kmMes - km, restam = dm - h.getDate() + 1;
+    if(h.getDate() > dm / 2 && falta > 0 && km < db.metas.kmMes * h.getDate() / dm)
+      add({ k: 'km', id: 'km:' + diaISO(ini), cor: 'aviso', rot: 'Corrida do mês', tit: `Faltam ${fmtNum(Math.round(falta * 10) / 10)} km em ${restam} ${restam === 1 ? 'dia' : 'dias'}`,
+        sub: `${fmtNum(Math.round(km * 10) / 10)} de ${db.metas.kmMes} km até agora.` });
+  }
+  /* 7 · constância (só em marcos: 4, 8, 12… semanas) */
+  const sq = sequencia();
+  if(sq >= 4 && sq % 4 === 0){
+    const d = diasConstancia();
+    add({ k: 'constancia', id: 'const:' + sq, cor: 'ok', bom: true, rot: 'Constância', tit: `${d} dias de constância`, sub: `${sq} semanas seguidas batendo a meta. Continue assim.` });
+  }
+  /* 8 · recorde do último treino (no dia seguinte) */
+  if(ult && diasEntre(ult.data, new Date()) === 1){
+    const rec = mudancasDe(ult).find(m => m.rec);
+    if(rec) add({ k: 'recorde', id: 'rec:' + ult.id, cor: 'ok', bom: true, rot: 'Recorde de ontem', tit: `${esc(nomeEx(rec.id))}: ${serieTxt(rec.id, ult.ex[rec.id].reduce((m, z) => forcaEst(num(z.kg) || 0, num(z.reps) || 0) > forcaEst(num(m.kg) || 0, num(m.reps) || 0) ? z : m))}`, sub: 'Sua melhor marca nesse exercício até hoje.' });
+  }
+  const ordem = AVISO_TIPOS.map(x => x[0]);
+  return out.sort((a, b) => ordem.indexOf(a.k) - ordem.indexOf(b.k));
+}
+function avisosHome(){
+  const ocultos = db.avisosOcultos || {};
+  const vis = avisosDisponiveis().filter(a => !(ocultos[a.id] && (ocultos[a.id] === 'x' || Date.now() < ocultos[a.id])));
+  const ruim = vis.find(a => !a.bom), bom = vis.find(a => a.bom);
+  return [ruim, bom].filter(Boolean).map(a => `<section class="av av-${a.cor}" aria-label="${esc(a.rot)}">
+    <div class="av-ic" aria-hidden="true"><svg viewBox="0 0 24 24">${AV_IC[a.k]}</svg></div>
+    <div class="av-txt"><p class="av-rot">${a.rot}</p><p class="av-tit">${a.tit}</p><p class="av-sub">${a.sub}</p>
+      ${a.acao ? `<div class="av-b"><button type="button" class="av-btn" data-acao="${a.acao[0]}">${a.acao[1]}</button><button type="button" class="av-depois" data-av-depois="${esc(a.id)}">Agora não</button></div>` : ''}</div>
+    <button type="button" class="av-x" data-av-x="${esc(a.id)}" aria-label="Dispensar aviso">${IC.x}</button></section>`).join('');
+}
+function avisoPausaRotulo(){
+  const ac = academia(), ult = ac[ac.length - 1]; if(!ult) return '';
+  const sem = diasEntre(ult.data, new Date()); return sem >= 3 ? ` · ${sem} dias sem treinar` : '';
+}
+
 function telaHome(){
   if(!db.configurado) return telaBoasVindas();
   const rot = rotacao();
@@ -570,7 +705,7 @@ function telaHome(){
     const outros = [...rot.filter(k => k !== prox), 'corrida'];
     const chips = outros.map(k => `<button type="button" class="hm-chip" data-tipo="${k}" data-home="1"><i style="background:${tomDe(k)[0]}"></i>${k === 'corrida' ? 'Corrida' : k}</button>`).join('') +
       `<button type="button" class="hm-chip${retroAberto ? ' on' : ''}" data-acao="${retroAberto ? 'retro-fechar' : 'retro-abrir'}" aria-expanded="${retroAberto}">Outro dia</button>`;
-    const rotulo = outroDia ? 'Lançar treino de ' + fmtDia(retroData) : feitoHoje ? 'Treino de hoje feito ✓ · próximo' : !db.sessoes.length ? 'Primeiro treino' : hojeTxt;
+    const rotulo = outroDia ? 'Lançar treino de ' + fmtDia(retroData) : feitoHoje ? 'Treino de hoje feito ✓ · próximo' : !db.sessoes.length ? 'Primeiro treino' : hojeTxt + avisoPausaRotulo();
     const q = quandoFoi(prox);
     principal = `<section class="hm-hero${feitoHoje && !outroDia ? ' feito' : ''}" style="${estiloTom(prox)}">${figuraTreino(prox)}<div class="hm-h-txt">
       <p class="hm-h-rot">${rotulo}</p>
@@ -583,7 +718,7 @@ function telaHome(){
         <input class="inp" type="date" id="retro-data" data-retro="1" value="${esc(retroData)}" min="${limiteRetro()}" max="${diaISO()}">
         <p class="cs" style="margin-top:6px">${outroDia ? `Toque no treino acima: ele será registrado em <b>${fmtDia(retroData)}</b>.` : 'Escolha a data e depois o treino acima.'}</p></div>` : ''}`;
   }
-  return topo + principal + lembreteBackup() + guiaPrimeiro() + cardMetas() + avisoInstalar() + cardsRodape();
+  return topo + principal + avisosHome() + lembreteBackup() + guiaPrimeiro() + cardMetas() + avisoInstalar() + cardsRodape();
 }
 
 function telaHoje(){
@@ -791,7 +926,7 @@ function telaTreino(t){
         <span class="ef-txt"><span class="ef-nome">${esc(e.nome)}</span><span class="ef-res">${resumo}</span></span>
         <span class="ef-ed">editar</span></button>`;
     }
-    const last = ultimo(e.id);
+    const last0 = ultimo(e.id), last = last0 && voltaAtiva() ? { ...last0, sets: last0.sets.map(z => ({ ...z, kg: kgVolta(z.kg) })) } : last0;
     const cardio = ehCardio(e.id);
     let ult = 'Sem registro anterior', hint = '';
     if(last && cardio){
@@ -1198,7 +1333,7 @@ function painelHist(soDet){
   }
   const semHtml = `<div class="hs-cab"><span>semana</span><span>academia</span><span></span><span>corrida</span></div>${semLinhas}`;
   const nums = [];
-  if(temMetaSemanal()){ const sq = sequencia(); nums.push([sq, plural(sq, 'semana na meta', 'semanas na meta')]); }
+  if(temMetaSemanal()){ const dc = diasConstancia(); nums.push([dc, plural(dc, 'dia de constância', 'dias de constância')]); }
   nums.push([fmtNum(Math.round(gym.length / semanas * 10) / 10), 'treinos/semana']);
   if(db.metas.kmMes){ const ref = new Date(agora.getFullYear(), agora.getMonth(), 1);
     const kmM = db.sessoes.filter(s => s.tipo === 'corrida' && new Date(s.data) >= ref).reduce((a, s) => a + (num(s.corrida?.km) || 0), 0);
@@ -1310,7 +1445,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v42 · nov/2026';
+const VERSAO = 'v43 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1330,6 +1465,9 @@ function telaPlano(){
         <div class="card"><div class="st-linha"><div><p class="m-nome">${resumoMetas}</p><p class="cs">Frequência semanal, carga e corrida. Tudo opcional.</p></div>
           <button type="button" class="mini-btn" data-acao="metas">${temAlgumaMeta() ? 'Editar' : 'Definir'}</button></div></div></div>
       ${window.blocoNuvem ? blocoNuvem() : ''}
+      <div><div class="sec"><span>Avisos no Início</span></div>
+        <div class="card av-cfg">${AVISO_TIPOS.map(([k, n]) => `<label><input type="checkbox" data-av-off="${k}" ${(db.avisosOff || {})[k] ? '' : 'checked'}><span>${n}</span></label>`).join('')}
+          <p class="cs" style="margin-top:8px">No máximo um alerta e uma coisa boa por vez.</p></div></div>
       <div><div class="sec"><span>Aparência</span></div>
         <div class="card"><div class="tema" role="group" aria-label="Aparência">${[['claro', 'Claro'], ['escuro', 'Escuro'], ['auto', 'Automático']].map(([k, n]) => `<button type="button" data-tema="${k}" aria-pressed="${tema() === k}">${n}</button>`).join('')}</div>
           <p class="cs" style="margin-top:10px">Automático segue o tema do celular.</p></div></div>
@@ -1762,6 +1900,8 @@ $('#app').addEventListener('input', e => {
 });
 
 $('#app').addEventListener('change', e => {
+  const avOff = e.target.dataset?.avOff;
+  if(avOff){ db.avisosOff = db.avisosOff || {}; if(e.target.checked) delete db.avisosOff[avOff]; else db.avisosOff[avOff] = true; save(); return; }
   const el = e.target;
   if(el.id === 'plano-ativo'){ db.planoAtivo = el.value; db.configurado = true; limparEscolha(); save(); render(); toast('Plano ativado'); return; }
   if(el.id === 'dash-ex'){ dashEx = el.value; render(); return; }
@@ -1803,6 +1943,13 @@ $('#app').addEventListener('click', e => {
   const el = e.target.closest('button'); if(!el || el.disabled) return;
   if(el.dataset.ficha){ fichaAberta = el.dataset.ficha; render(); return; }
   if(el.dataset.acao === 'fechar-ficha'){ fichaAberta = null; render(); return; }
+  if(el.dataset.avX || el.dataset.avDepois){
+    db.avisosOcultos = db.avisosOcultos || {};
+    if(el.dataset.avX) db.avisosOcultos[el.dataset.avX] = 'x'; else db.avisosOcultos[el.dataset.avDepois] = Date.now() + 3 * DIA;
+    /* limpa ocultos antigos */
+    const ks = Object.keys(db.avisosOcultos); if(ks.length > 60) ks.slice(0, ks.length - 60).forEach(k => delete db.avisosOcultos[k]);
+    save(); render(); return;
+  }
   if(el.dataset.bv){ bvEscolha = el.dataset.bv; render(); return; }
   if(el.dataset.meta){
     const k = el.dataset.meta; db.metas[k] = Math.max(0, Math.min(7, (db.metas[k] || 0) + Number(el.dataset.delta)));
@@ -1827,7 +1974,7 @@ $('#app').addEventListener('click', e => {
     if(s.reps !== ''){ toast(ehCardio(e.id) ? 'Para desfazer, apague os minutos' : 'Para desfazer, apague as reps'); return; }
     {
       const ls = ultimo(e.id)?.sets[i] || (i > 0 && sets[i - 1].reps !== '' ? sets[i - 1] : null);
-      const kg = s.kg || (ls ? String(ls.kg || '').replace('.', ',') : '');
+      const kg = s.kg || (ls ? String((voltaAtiva() && ultimo(e.id)?.sets[i] ? kgVolta(ls.kg) : ls.kg) || '').replace('.', ',') : '');
       const reps = ls ? ls.reps : '';
       if(!reps){ const inp = el.closest('.set').querySelector('[data-f="reps"]'); inp?.focus(); toast(ehCardio(e.id) ? 'Digite os minutos' : 'Digite as repetições'); return; }
       sets[i] = { kg, reps };
@@ -1990,6 +2137,8 @@ $('#app').addEventListener('click', e => {
     abrirEditor(null); render(); window.scrollTo(0, 0); return;
   }
   if(acao === 'bv-entrar'){ aba = 'plano'; planoSecao = 'ajustes'; render(); window.scrollTo(0, 0); setTimeout(() => { const b = document.querySelector('[data-nuvem="abrir"]'); if(b){ b.click(); setTimeout(() => document.getElementById('nuvem-box')?.scrollIntoView({ block: 'start' }), 50); } }, 0); return; }
+  if(acao === 'volta-90'){ db.volta = { dia: diaISO() }; save(); render(); toast('Cargas a 90% só no treino de hoje'); return; }
+  if(acao === 'ver-hist'){ aba = 'historico'; histEx = null; render(); window.scrollTo(0, 0); return; }
   if(acao === 'metas-editar'){ metasEditando = true; render(); return; }
   if(acao === 'metas-pronto'){ metasEditando = false; render(); return; }
   if(acao === 'retro-abrir'){ retroAberto = true; retroData = ''; render(); setTimeout(() => $('#retro-data')?.focus(), 0); return; }
