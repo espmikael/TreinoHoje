@@ -533,7 +533,7 @@ function avisoInstalar(){
     <div class="hm-inst-b"><button type="button" class="mini-btn" data-acao="como-instalar">Mostrar como</button><button type="button" class="lnk lnk-mini" data-acao="fechar-instalar">Depois</button></div></section>`;
 }
 /* cada treino tem um tom da paleta do app (ordem da rotação); corrida é âmbar */
-const TONS = [['#c24a37', '#8e2f22'], ['#7d8c47', '#4f5b2a'], ['#c08a2c', '#8a5c14'], ['#5f7f8c', '#3d5560'], ['#8a5a7a', '#5e3a54']];
+const TONS = [['#c24a37', '#8e2f22'], ['#7d8c47', '#4f5b2a'], ['#557c88', '#30505a'], ['#8a5876', '#5a344e'], ['#5c5953', '#34322e']];
 function tomDe(k){
   if(k === 'corrida') return ['#d39a45', '#9c6519'];
   const i = rotacao().indexOf(k); return TONS[(i < 0 ? 0 : i) % TONS.length];
@@ -1445,7 +1445,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v43 · nov/2026';
+const VERSAO = 'v44 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
