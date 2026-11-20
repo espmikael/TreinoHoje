@@ -599,6 +599,11 @@ const FICHAS = {
 
 function desenhoPose(id, quadro){ return boneco(id, quadro); }
 
+/* Ilustrações 3D (uma imagem por exercício). Quem não tem imagem continua com o boneco desenhado. */
+const FOTOS = new Set(["abdominal", "agachamento", "barra-fixa", "desenvolvimento", "elevacao-lateral", "extensora", "flexora", "panturrilha", "remada", "remada-maquina", "rosca-direta", "rosca-martelo", "stiff", "supino-inclinado", "supino-reto", "triceps-frances", "triceps-pulley"]);
+const temFoto = id => FOTOS.has(id);
+const fotoEx = id => `<img class="foto-ex" src="img/ex/${id}.webp" alt="" loading="lazy" decoding="async" width="720" height="720">`;
+
 function folhaFicha(id){
   const f = FICHAS[id]; if(!f) return '';
   const ex = plano().rotacao.map(k => plano().treinos[k].ex).flat().find(e => e.id === id) || BIB_ID[id] || {};
@@ -608,7 +613,7 @@ function folhaFicha(id){
     <div class="folha-alca" aria-hidden="true"></div>
     <div class="ficha-topo"><div><p class="rot">${esc(f.pad)}</p><h2 id="ficha-tit">${esc(nomeEx(id))}</h2></div>
       <button type="button" class="x-btn" data-acao="fechar-ficha" aria-label="Fechar ficha">${IC.x}</button></div>
-    <div class="poses"><figure>${desenhoPose(id, 'A')}<figcaption>Início</figcaption></figure><figure>${desenhoPose(id, 'B')}<figcaption>Fim</figcaption></figure></div>
+    ${temFoto(id) ? `<div class="poses foto"><figure>${fotoEx(id)}</figure></div>` : `<div class="poses"><figure>${desenhoPose(id, 'A')}<figcaption>Início</figcaption></figure><figure>${desenhoPose(id, 'B')}<figcaption>Fim</figcaption></figure></div>`}
     <p class="lb" style="margin-top:16px">Músculos</p><div class="chips">${chips}</div>
     <p class="lb" style="margin-top:16px">Execução</p>
     <ol class="dicas">${f.dicas.map((d, i) => `<li><span>${pad2(i + 1)}</span>${esc(d)}</li>`).join('')}</ol>

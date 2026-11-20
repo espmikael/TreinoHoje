@@ -551,10 +551,14 @@ function tomDe(k){
   if(k === LIVRE) return ['#5c5953', '#34322e'];
   const i = rotacao().indexOf(k); return TONS[(i < 0 ? 0 : i) % TONS.length];
 }
+const HALO = ['#7d8c47', '#6d7a5a']; // tons verdes: halo claro atrás da imagem para o músculo verde não sumir
 const estiloTom = k => { const [a, b] = tomDe(k); return `--t1:${a};--t2:${b}`; };
 function figuraTreino(k){
   if(k === 'corrida' || k === LIVRE) return '';
-  const ex = (plano().treinos[k]?.ex || []).find(e => !ehCardio(e.id) && POSES && FICHAS[e.id]);
+  const lista = (plano().treinos[k]?.ex || []).filter(e => !ehCardio(e.id));
+  const foto = lista.find(e => temFoto(e.id));
+  if(foto) return `<div class="hm-fig hm-foto${HALO.includes(tomDe(k)[0]) ? ' halo' : ''}" aria-hidden="true">${fotoEx(foto.id)}</div>`;
+  const ex = lista.find(e => POSES && FICHAS[e.id]);
   return ex ? `<div class="hm-fig" aria-hidden="true">${desenhoPose(ex.id, 'B')}</div>` : '';
 }
 const DIAS_LONGOS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
@@ -1379,7 +1383,7 @@ function painelHist(soDet){
   const evoHtml = evol ? (() => { const vs = evol.pts.map(p => p.v), mn = Math.min(...vs), mx = Math.max(...vs);
       const xy = vs.map((v, i) => [vs.length > 1 ? i / (vs.length - 1) * 300 : 300, 52 - (mx > mn ? (v - mn) / (mx - mn) * 46 : 23)]);
       return `<button type="button" class="hp-evo" data-hex="${evol.id}" style="${estiloTom('A')}">
-        ${FICHAS[evol.id] ? `<div class="hm-fig" aria-hidden="true">${desenhoPose(evol.id, 'B')}</div>` : ''}
+        ${temFoto(evol.id) ? `<div class="hm-fig hm-foto" aria-hidden="true">${fotoEx(evol.id)}</div>` : FICHAS[evol.id] ? `<div class="hm-fig" aria-hidden="true">${desenhoPose(evol.id, 'B')}</div>` : ''}
         <span class="hp-evo-rot">Maior evolução · ${nomeP.toLowerCase()}</span><span class="hp-evo-nome">${esc(nomeEx(evol.id))}</span>
         <span class="hp-evo-n">+${fmtNum(evol.d)}<small> kg</small></span>
         <svg viewBox="-6 -6 312 64" preserveAspectRatio="none" aria-hidden="true"><polyline points="${xy.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}"/><circle cx="${xy[xy.length - 1][0]}" cy="${xy[xy.length - 1][1].toFixed(1)}" r="5"/></svg>
@@ -1523,7 +1527,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v50 · nov/2026';
+const VERSAO = 'v51 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
