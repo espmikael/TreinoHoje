@@ -1527,7 +1527,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v52 · nov/2026';
+const VERSAO = 'v53 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
