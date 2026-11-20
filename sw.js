@@ -1,6 +1,6 @@
 /* TreinoHoje — service worker: faz o app abrir sem internet.
    Ao mudar arquivos do app, aumente o número da versão abaixo. */
-const CACHE = 'treinohoje-v55';
+const CACHE = 'treinohoje-v56';
 const CACHE_IMG = 'treinohoje-img-1'; // ilustrações: ficam guardadas entre versões; troque o número se substituir imagens
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './icon.svg', './icon-maskable-512.png', './estilo.css', './app.js', './exercicios.js', './nuvem.js'];
 
