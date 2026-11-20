@@ -927,7 +927,7 @@ svg text.val{paint-order:stroke;stroke:var(--surface);stroke-width:5px;stroke-li
 .poses.foto{grid-template-columns:1fr}
 .poses.foto figure{background:var(--foto-bg);border-radius:14px;overflow:hidden}
 .poses.foto .foto-ex{max-width:340px;margin:0 auto}
-.hm-hero .hm-foto{right:-22px;bottom:-14px;width:184px;opacity:1;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 34%);mask-image:linear-gradient(90deg,transparent 0,#000 34%)}
-.hp-evo .hm-foto{right:-16px;top:-4px;width:180px;opacity:1}
+.hm-hero .hm-foto{right:8px;bottom:6px;width:172px;opacity:1;-webkit-mask-image:linear-gradient(90deg,rgba(0,0,0,.25) 0,#000 22%);mask-image:linear-gradient(90deg,rgba(0,0,0,.25) 0,#000 22%)}
+.hp-evo .hm-foto{right:6px;top:6px;width:168px;opacity:1}
 .hm-foto.halo::before{content:"";position:absolute;inset:6% 0 -6% 4%;border-radius:50%;background:radial-gradient(closest-side,rgba(247,243,234,.42),rgba(247,243,234,0))}
 .hm-foto .foto-ex{position:relative}
