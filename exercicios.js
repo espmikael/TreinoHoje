@@ -600,7 +600,7 @@ const FICHAS = {
 function desenhoPose(id, quadro){ return boneco(id, quadro); }
 
 /* Ilustrações 3D (uma imagem por exercício). Quem não tem imagem continua com o boneco desenhado. */
-const FOTOS = new Set(["abdominal", "abdutora", "adutora", "agachamento", "barra-fixa", "bulgaro", "crossover", "crucifixo-inverso", "desenvolvimento", "elevacao-lateral", "elevacao-pelvica", "extensora", "face-pull", "flexora", "flexora-sentada", "leg-press", "mergulho", "panturrilha", "puxada-alta", "puxada-neutra", "remada", "remada-baixa", "remada-maquina", "rosca-alternada", "rosca-direta", "rosca-martelo", "rosca-scott", "stiff", "supino-inclinado", "supino-reto", "supino-reto-halteres", "triceps-frances", "triceps-pulley", "triceps-pulley-barra", "triceps-testa", "voador"]);
+const FOTOS = new Set(["abdominal", "abdutora", "adutora", "agachamento", "barra-fixa", "bulgaro", "crossover", "crucifixo-inverso", "desenvolvimento", "elevacao-lateral", "elevacao-pelvica", "extensora", "face-pull", "flexora", "leg-press", "mergulho", "panturrilha", "puxada-alta", "puxada-neutra", "remada", "remada-baixa", "remada-maquina", "rosca-alternada", "rosca-direta", "rosca-martelo", "rosca-scott", "stiff", "supino-inclinado", "supino-reto", "supino-reto-halteres", "triceps-frances", "triceps-pulley", "triceps-pulley-barra", "triceps-testa", "voador"]);
 const temFoto = id => FOTOS.has(id);
 const fotoEx = id => `<img class="foto-ex" src="img/ex/${id}.webp" alt="" loading="lazy" decoding="async" width="720" height="720">`;
 
