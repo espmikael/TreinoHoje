@@ -133,7 +133,7 @@ function melhorSerie(sets){
   }
   return best;
 }
-let desfazer = null; const marcadoEm = {};
+let desfazer = null; const marcadoEm = {}; const digitado = {};
 function toast(msg, acao){
   const t = $('#toast'); t.textContent = msg;
   if(acao && desfazer){ const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-acao'; b.textContent = acao;
@@ -1534,7 +1534,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v60 · nov/2026';
+const VERSAO = 'v61 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -1943,6 +1943,7 @@ $('#app').addEventListener('input', e => {
     const e = exerciciosDoDia(t).find(x => x.id === el.dataset.ex);
     const sets = setsDe(rd, e);
     sets[+el.dataset.i][el.dataset.f] = el.value.trim();
+    digitado[e.id + ':' + el.dataset.i] = true;
     rd.editado = Date.now(); rd.dataReg = dataRetro();
     save();
     const row = el.closest('.set');
@@ -2080,6 +2081,12 @@ $('#app').addEventListener('click', e => {
     const chave = e.id + ':' + i;
     /* no iPhone um toque às vezes chega duas vezes: ignora o segundo logo depois de marcar */
     if(marcadoEm[chave] && Date.now() - marcadoEm[chave] < 900) return;
+    /* reps digitadas à mão: o ✓ confirma (não desmarca) */
+    if(s.reps !== '' && digitado[chave]){
+      delete digitado[chave]; recemMarcado = chave; marcadoEm[chave] = Date.now(); vibrar(12);
+      if(completo(sets)){ abertos.delete(e.id); recemFechado = e.id; recemMarcado = null; }
+      save(); render(); return;
+    }
     if(s.reps !== ''){
       const antes = { ...s };
       sets[i] = { kg: s.kg, reps: '' }; rd.editado = Date.now(); save();
