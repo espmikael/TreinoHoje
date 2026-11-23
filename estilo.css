@@ -931,3 +931,8 @@ svg text.val{paint-order:stroke;stroke:var(--surface);stroke-width:5px;stroke-li
 .hp-evo .hm-foto{right:6px;top:6px;width:168px;opacity:1}
 .hm-foto.halo::before{content:"";position:absolute;inset:6% 0 -6% 4%;border-radius:50%;background:radial-gradient(closest-side,rgba(247,243,234,.42),rgba(247,243,234,0))}
 .hm-foto .foto-ex{position:relative}
+
+/* rodada 29: desfazer no aviso */
+.toast.show{pointer-events:auto}
+.toast:has(.toast-acao){display:flex;align-items:center;white-space:nowrap}
+.toast-acao{margin-left:10px;padding:4px 2px;font:inherit;font-weight:800;color:inherit;background:none;border:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}

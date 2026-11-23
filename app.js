@@ -133,7 +133,14 @@ function melhorSerie(sets){
   }
   return best;
 }
-function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2000); }
+let desfazer = null; const marcadoEm = {};
+function toast(msg, acao){
+  const t = $('#toast'); t.textContent = msg;
+  if(acao && desfazer){ const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-acao'; b.textContent = acao;
+    const f = desfazer; b.onclick = () => { f(); t.classList.remove('show'); }; t.append(' ', b); }
+  desfazer = null;
+  t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), acao ? 4000 : 2000);
+}
 
 function calendario(d = new Date()){
   const ehHoje = diaISO(d) === diaISO();
@@ -1527,7 +1534,7 @@ function telaHistorico(){
 /* =========================================================
    PLANO + EDITOR + GERADOR
    ========================================================= */
-const VERSAO = 'v59 · nov/2026';
+const VERSAO = 'v60 · nov/2026';
 let planoSecao = 'plano';      // plano | ajustes
 function telaPlano(){
   const p = plano();
@@ -2070,12 +2077,17 @@ $('#app').addEventListener('click', e => {
     const rd = rascunho(t);
     const e = exerciciosDoDia(t).find(x => x.id === el.dataset.ok);
     const sets = setsDe(rd, e); const i = +el.dataset.i; const s = sets[i];
+    const chave = e.id + ':' + i;
+    /* no iPhone um toque às vezes chega duas vezes: ignora o segundo logo depois de marcar */
+    if(marcadoEm[chave] && Date.now() - marcadoEm[chave] < 900) return;
     if(s.reps !== ''){
+      const antes = { ...s };
       sets[i] = { kg: s.kg, reps: '' }; rd.editado = Date.now(); save();
+      desfazer = () => { const ss = setsDe(rascunho(t), exerciciosDoDia(t).find(x => x.id === e.id)); ss[i] = antes; rascunho(t).editado = Date.now(); save(); render(); };
       const row = el.closest('.set'); const ri = row?.querySelector('[data-f="reps"]');
       if(ri){ ri.value = ''; row.classList.remove('ok'); el.setAttribute('aria-pressed', 'false'); atualizarBarra(t); }
       else render();
-      toast('Série desmarcada'); return;
+      toast('Série desmarcada', 'Desfazer'); return;
     }
     {
       const ls = ultimo(e.id)?.sets[i] || (i > 0 && sets[i - 1].reps !== '' ? sets[i - 1] : null);
@@ -2084,7 +2096,7 @@ $('#app').addEventListener('click', e => {
       if(!reps){ const inp = el.closest('.set').querySelector('[data-f="reps"]'); inp?.focus(); toast(ehCardio(e.id) ? 'Digite os minutos' : 'Digite as repetições'); return; }
       sets[i] = { kg, reps };
       rd.editado = Date.now(); rd.dataReg = dataRetro();
-      recemMarcado = e.id + ':' + i;
+      recemMarcado = chave; marcadoEm[chave] = Date.now();
       vibrar(12);
       if(completo(sets)){ abertos.delete(e.id); recemFechado = e.id; recemMarcado = null; }
     }
